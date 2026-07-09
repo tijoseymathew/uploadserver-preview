@@ -262,6 +262,8 @@
 
   var name = baseName(decode(path));
   document.title = name + ' · preview';
+  var titlelabel = document.getElementById('titlelabel');
+  if (titlelabel) titlelabel.textContent = name;
 
   var raw = document.getElementById('rawlink');
   raw.href = path; raw.target = '_blank'; raw.rel = 'noopener noreferrer';
@@ -277,6 +279,41 @@
 
   document.getElementById('kind').textContent = kind.label;
 
+  // Rendered/Raw view toggle. Only meaningful for kinds that have a distinct
+  // rendered form; plain code and images look the same either way.
+  var HAS_RENDERED = { markdown: 1, json: 1, csv: 1, tsv: 1, diff: 1 };
+  var VIEW = { text: null, mode: 'rendered' };
+
+  function renderCurrent() {
+    content.innerHTML = '';
+    var text = VIEW.text;
+    if (VIEW.mode === 'raw') { return renderCode(text, kind.lang); }
+    switch (kind.type) {
+      case 'markdown': return renderMarkdown(text);
+      case 'json': return renderJson(text, kind);
+      case 'csv': return renderTable(text, ',');
+      case 'tsv': return renderTable(text, '\t');
+      case 'diff': return renderDiff(text);
+      case 'html-source':
+        content.appendChild(noticeEl('Shown as source. Uploaded HTML is never executed by the previewer.'));
+        return renderCode(text, kind.lang);
+      default: return renderCode(text, kind.lang);
+    }
+  }
+
+  var toggle = document.getElementById('viewtoggle');
+  var btnRendered = document.getElementById('btn-rendered');
+  var btnRaw = document.getElementById('btn-raw');
+  function setMode(m) {
+    if (VIEW.mode === m) return;
+    VIEW.mode = m;
+    if (btnRendered) btnRendered.setAttribute('aria-pressed', String(m === 'rendered'));
+    if (btnRaw) btnRaw.setAttribute('aria-pressed', String(m === 'raw'));
+    renderCurrent();
+  }
+  if (btnRendered) btnRendered.addEventListener('click', function () { setMode('rendered'); });
+  if (btnRaw) btnRaw.addEventListener('click', function () { setMode('raw'); });
+
   fetch(path, { credentials: 'same-origin' }).then(function (res) {
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
     var len = parseInt(res.headers.get('Content-Length') || '0', 10);
@@ -291,17 +328,9 @@
         return setError('Binary file', 'This does not look like a text file, so there is nothing to format.', path);
       }
       setMeta(len, text);
-      switch (kind.type) {
-        case 'markdown': return renderMarkdown(text);
-        case 'json': return renderJson(text, kind);
-        case 'csv': return renderTable(text, ',');
-        case 'tsv': return renderTable(text, '\t');
-        case 'diff': return renderDiff(text);
-        case 'html-source':
-          content.appendChild(noticeEl('Shown as source. Uploaded HTML is never executed by the previewer.'));
-          return renderCode(text, kind.lang);
-        default: return renderCode(text, kind.lang);
-      }
+      VIEW.text = text;
+      if (toggle && HAS_RENDERED[kind.type]) toggle.hidden = false;
+      renderCurrent();
     });
   }).catch(function (e) {
     setError('Could not load file', e.message, path);

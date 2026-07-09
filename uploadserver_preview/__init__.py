@@ -82,27 +82,38 @@ _NO_EXT_NAMES = {"dockerfile", "makefile", ".gitignore", ".gitattributes", ".env
 PREVIEWABLE = _TEXT_EXT | _IMAGE_EXT
 
 
-def _kind_tag(name, is_dir):
-    """Return (css_class, short_label) for the type-glyph tag in listings."""
+_DIR_GLYPH = "▸"    # ▸
+_FILE_GLYPH = "◆"   # ◆
+_MARKUP_EXT = {"html", "htm", "xhtml", "xml"}
+
+
+def _kind_glyph(name, is_dir):
+    """Return (css_class, glyph_char) for the coloured file-kind glyph.
+
+    The class picks the glyph colour from the theme tokens (--g-*); the char is
+    a folder caret for directories and a diamond for files.
+    """
     if is_dir:
-        return "dir", "dir"
+        return "dir", _DIR_GLYPH
     lower = name.lower()
     ext = lower.rsplit(".", 1)[-1] if "." in lower else ""
     if lower in _NO_EXT_NAMES or ext == "":
         if lower in ("readme",):
-            return "doc", "doc"
-        return "code", "txt"
+            return "doc", _FILE_GLYPH
+        return "code", _FILE_GLYPH
     if ext in _IMAGE_EXT:
-        return "img", ext
+        return "img", _FILE_GLYPH
     if ext in _DIFF_EXT:
-        return "diff", ext
+        return "diff", _FILE_GLYPH
+    if ext in _MARKUP_EXT:
+        return "html", _FILE_GLYPH
     if ext in _DATA_EXT:
-        return "data", ext
+        return "data", _FILE_GLYPH
     if ext in _DOC_EXT:
-        return "doc", ext
+        return "doc", _FILE_GLYPH
     if ext in _TEXT_EXT:
-        return "code", ext
-    return "", ext or "bin"
+        return "code", _FILE_GLYPH
+    return "bin", _FILE_GLYPH
 
 
 def _is_previewable(name):
@@ -140,20 +151,32 @@ def get_viewer_page(theme):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="%(color_scheme)s">
 <title>Preview</title>
+<link rel="stylesheet" href="%(route)sthemes.css">
 <link rel="stylesheet" href="%(route)sapp.css">
 <link rel="stylesheet" href="%(route)sdiff2html.min.css">
 %(hljs_css)s
 </head>
 <body>
-<header class="topbar">
-  <a class="back" id="backlink" href="/" title="Back to folder" aria-label="Back to folder">&larr;</a>
-  <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
-  <span class="spacer"></span>
-  <span class="badge" id="kind"></span>
-  <span class="meta" id="meta"></span>
-  <a class="raw" id="rawlink" href="#">raw</a>
-</header>
-<main id="content" class="content"><div class="loading">Loading&hellip;</div></main>
+<div class="app">
+  <div class="titlebar">
+    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="title" id="titlelabel">preview</span>
+    <span class="chip"><span class="led" aria-hidden="true"></span>local</span>
+  </div>
+  <header class="topbar">
+    <a class="back" id="backlink" href="/" title="Back to folder" aria-label="Back to folder">&larr;</a>
+    <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+    <span class="spacer"></span>
+    <span class="badge" id="kind"></span>
+    <span class="meta" id="meta"></span>
+    <div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>
+      <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
+      <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
+    </div>
+    <a class="raw" id="rawlink" href="#">raw &#8599;</a>
+  </header>
+  <main id="content" class="content"><div class="loading">Loading&hellip;</div></main>
+</div>
 %(scripts)s
 </body>
 </html>"""
@@ -199,19 +222,19 @@ def _render_listing(handler, fs_path, names):
 
     rows = []
     for name, is_dir, full in entries:
-        tag_cls, tag_label = _kind_tag(name, is_dir)
+        glyph_cls, glyph_ch = _kind_glyph(name, is_dir)
         display = name + ("/" if is_dir else "")
         quoted = urllib.parse.quote(name)
         if is_dir:
             href = quoted + "/"
             rows.append(
                 '<div class="row isdir">'
-                '<span class="name"><span class="tag %s">%s</span>'
+                '<span class="name"><span class="glyph %s" aria-hidden="true">%s</span>'
                 '<a href="%s">%s</a></span>'
                 '<span class="size">&mdash;</span>'
                 '<span class="raw-link"></span>'
                 "</div>"
-                % (tag_cls, esc(tag_label), href, esc(display))
+                % (glyph_cls, glyph_ch, href, esc(display))
             )
         else:
             try:
@@ -226,15 +249,20 @@ def _render_listing(handler, fs_path, names):
                 name_href = quoted  # direct download
             rows.append(
                 '<div class="row">'
-                '<span class="name"><span class="tag %s">%s</span>'
+                '<span class="name"><span class="glyph %s" aria-hidden="true">%s</span>'
                 '<a href="%s">%s</a></span>'
                 '<span class="size">%s</span>'
                 '<a class="raw-link" href="%s" target="_blank" rel="noopener">raw</a>'
                 "</div>"
-                % (tag_cls, esc(tag_label), name_href, esc(display), size_h, quoted)
+                % (glyph_cls, glyph_ch, name_href, esc(display), size_h, quoted)
             )
 
     body_rows = "".join(rows) if rows else '<div class="empty">This folder is empty.</div>'
+
+    # title-bar label: the folder we're serving (root shows a friendly name)
+    folder = segs[-1] if segs else "~"
+    n = len(entries)
+    footer = "%d item%s &middot; use Upload to add files" % (n, "" if n == 1 else "s")
 
     return """<!DOCTYPE html>
 <html lang="en" data-theme="%(theme)s">
@@ -243,19 +271,28 @@ def _render_listing(handler, fs_path, names):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="%(color_scheme)s">
 <title>%(title)s</title>
+<link rel="stylesheet" href="%(route)sthemes.css">
 <link rel="stylesheet" href="%(route)sapp.css">
 </head>
 <body>
-<div class="dir">
-  <div class="dir-head">
-    <nav class="dir-title" aria-label="Breadcrumb">%(crumbs)s</nav>
-    <div class="dir-actions">
-      <a class="btn btn-accent" href="/upload">Upload files</a>
+<div class="app">
+  <div class="titlebar">
+    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="title">%(folder)s &mdash; client-side explorer</span>
+    <span class="chip"><span class="led" aria-hidden="true"></span>local</span>
+  </div>
+  <div class="exp-head">
+    <nav class="crumbs" aria-label="Breadcrumb">%(crumbs)s</nav>
+    <span class="exp-actions">
+      <a class="btn btn-accent" href="/upload">&#8593; Upload</a>
+    </span>
+  </div>
+  <div class="tree">
+    <div class="tree-inner">
+%(rows)s
     </div>
   </div>
-  <div class="rows">
-%(rows)s
-  </div>
+  <div class="exp-foot">%(footer)s</div>
 </div>
 </body>
 </html>""" % {
@@ -263,8 +300,10 @@ def _render_listing(handler, fs_path, names):
         "color_scheme": uploadserver.COLOR_SCHEME.get(theme, "light dark"),
         "title": esc(url_path),
         "route": ASSET_ROUTE,
+        "folder": esc(folder),
         "crumbs": crumbs,
         "rows": body_rows,
+        "footer": footer,
     }
 
 
