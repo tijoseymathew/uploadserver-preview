@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node (dev-only test deps)
+node_modules/
+package-lock.json
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
