@@ -17,6 +17,7 @@ used for every request.
 import http
 import http.server
 import io
+import json
 import mimetypes
 import os
 import posixpath
@@ -29,6 +30,7 @@ __all__ = ["PreviewHTTPRequestHandler", "main", "serve"]
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 ASSET_ROUTE = "/__preview_asset__/"
 VIEW_ROUTE = "/__view__"
+INDEX_ROUTE = "/__index__"
 
 # Files we are willing to serve from the assets directory (basename whitelist).
 _ASSET_FILES = frozenset(
@@ -122,6 +124,60 @@ def _is_previewable(name):
         return True
     ext = lower.rsplit(".", 1)[-1] if "." in lower else ""
     return ext in PREVIEWABLE
+
+
+def _list_entries(fs_path, names):
+    """Sort a directory's names: dirs first, then files, case-insensitive.
+
+    Returns a list of (name, is_dir, full_fs_path) tuples.
+    """
+    entries = []
+    for name in names:
+        full = os.path.join(fs_path, name)
+        entries.append((name, os.path.isdir(full), full))
+    entries.sort(key=lambda e: (not e[1], e[0].lower()))
+    return entries
+
+
+def _entry_json(url_path, name, is_dir, full):
+    """Describe one listing entry as JSON-serialisable data for the explorer.
+
+    `url_path` is the (unquoted) URL of the containing directory, ending in "/".
+    Mirrors the fields the client's row builder in explorer.js expects.
+    """
+    quoted = urllib.parse.quote(name)
+    glyph_cls, glyph_ch = _kind_glyph(name, is_dir)
+    d = {"name": name, "is_dir": is_dir, "glyph_cls": glyph_cls, "glyph": glyph_ch}
+    if is_dir:
+        d["path"] = url_path + quoted + "/"
+    else:
+        try:
+            d["size_h"] = _human_size(os.path.getsize(full))
+        except OSError:
+            d["size_h"] = ""
+        abs_url = url_path + quoted
+        d["raw"] = abs_url
+        if _is_previewable(name):
+            d["view"] = VIEW_ROUTE + "?path=" + urllib.parse.quote(abs_url, safe="")
+        else:
+            d["view"] = None
+    return d
+
+
+def _dir_index(handler, url_path):
+    """Return the JSON index dict for the directory at `url_path` (ends in "/").
+
+    Raises OSError if the directory can't be listed.
+    """
+    # translate_path unquotes its argument, so hand it a quoted path (url_path is
+    # already unquoted) to avoid corrupting names containing '%'.
+    fs_path = handler.translate_path(urllib.parse.quote(url_path))
+    names = os.listdir(fs_path)
+    entries = _list_entries(fs_path, names)
+    return {
+        "path": url_path,
+        "entries": [_entry_json(url_path, n, d, f) for (n, d, f) in entries],
+    }
 
 
 def get_viewer_page(theme):
@@ -362,6 +418,9 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
                 csp=True,
             )
             return True
+        if route == INDEX_ROUTE:
+            self._serve_index()
+            return True
         if route.startswith(ASSET_ROUTE):
             self._serve_asset(route[len(ASSET_ROUTE):])
             return True
@@ -391,6 +450,23 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         return io.BytesIO(body)
 
     # ---------- helpers ----------
+    def _serve_index(self):
+        """Serve a directory's listing as JSON (drives the explorer tree)."""
+        query = urllib.parse.urlsplit(self.path).query
+        raw = (urllib.parse.parse_qs(query).get("path") or ["/"])[0]
+        url_path = urllib.parse.unquote(raw)
+        if not url_path.startswith("/"):
+            url_path = "/" + url_path
+        if not url_path.endswith("/"):
+            url_path += "/"
+        try:
+            data = _dir_index(self, url_path)
+        except OSError:
+            self.send_error(http.HTTPStatus.NOT_FOUND, "No permission to list directory")
+            return
+        body = json.dumps(data).encode("utf-8")
+        self._send_bytes(body, "application/json; charset=utf-8", cache=False, csp=True)
+
     def _serve_asset(self, name):
         safe = posixpath.basename(urllib.parse.unquote(name))
         fpath = os.path.join(ASSETS_DIR, safe)
