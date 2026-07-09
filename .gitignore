@@ -11,10 +11,14 @@ dist/
 .venv/
 venv/
 env/
+uv.lock
 
 # Node (dev-only test deps)
 node_modules/
 package-lock.json
+
+# Test convenience symlink (assets reachable from tests/)
+tests/uploadserver_preview
 
 # Editors / OS
 .vscode/
