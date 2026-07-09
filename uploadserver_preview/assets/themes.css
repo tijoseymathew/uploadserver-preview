@@ -1,0 +1,151 @@
+/* uploadserver-preview — theme tokens.
+   ---------------------------------------------------------------------------
+   Every colour the UI uses is a semantic custom property defined here; app.css
+   only ever references these tokens, never a raw colour. A "theme" is therefore
+   just one block of token values.
+
+   HOW TO ADD A THEME
+   ------------------
+   1. Copy one of the blocks below and rename the selector to
+      [data-theme="yourname"].
+   2. Override the tokens you want; anything you leave out inherits the :root
+      (light) default.
+   3. Expose it: add "yourname" to the --theme choices in _build_parser()
+      (uploadserver_preview/__init__.py) and, if it is a dark variant, add it to
+      the auto/media-query rule at the bottom of this file.
+
+   Selection: <html data-theme="light|dark|auto"> is emitted server-side from the
+   --theme flag. "auto" carries no palette of its own — it resolves to light or
+   dark from prefers-color-scheme via the media query at the end.
+   =========================================================================== */
+
+:root {
+  /* ---- surfaces ---- */
+  --bg:            #e9e9ec;   /* the desk behind the app window            */
+  --chrome:        #f3f3f5;   /* title bar / footer                        */
+  --panel:         #ffffff;   /* main content surface                      */
+  --panel-2:       #f7f7f8;   /* insets: gutters, table heads, code blocks */
+  --sidebar:       #fbfbfc;   /* explorer / tree background                */
+
+  --border:        #e4e4e8;
+  --border-soft:   #eeeef0;
+  --border-strong: #d8d8dd;
+
+  /* ---- text ---- */
+  --text:          #1c1c22;
+  --text-strong:   #0a0a0c;
+  --muted:         #6a6a72;
+  --faint:         #9a9aa2;
+
+  /* ---- accent (interactive / active) ---- */
+  --accent:          #2f6feb;
+  --accent-fg:       #1a4fb0;              /* accent text on plain bg */
+  --accent-weak:     rgba(47, 111, 235, .10);
+  --accent-strong:   rgba(47, 111, 235, .16);
+  --accent-contrast: #ffffff;             /* text on a filled accent */
+
+  /* ---- diff / change ---- */
+  --add-fg: #1a7f37;  --add-bg: #e6ffec;
+  --del-fg: #cf222e;  --del-bg: #ffebe9;
+  --link:   #2f6feb;
+  --danger: #cf222e;
+
+  /* ---- file-kind glyph colours (the coloured ◆ in listings) ---- */
+  --g-dir:    #d9a021;   /* folders                */
+  --g-code:   #2f6feb;   /* source code            */
+  --g-doc:    #4c86ad;   /* markdown / prose       */
+  --g-data:   #b0902f;   /* json / yaml / csv      */
+  --g-html:   #d9682f;   /* html / xml             */
+  --g-img:    #9a4fc0;   /* images                 */
+  --g-diff:   #c9573b;   /* diffs / patches        */
+
+  /* ---- shape ---- */
+  --radius:    8px;
+  --radius-lg: 12px;
+  --radius-sm: 6px;
+
+  /* fonts: offline-first system stacks (no webfonts — the app runs on isolated
+     LANs with a strict CSP). JetBrains/Cascadia are used only if present. */
+  --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace;
+  --ui:   system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  color-scheme: light;
+}
+
+/* ===========================================================================
+   THEME: dark  — "Dark IDE" (design reference 1a)
+   =========================================================================== */
+[data-theme="dark"] {
+  --bg:            #0f1116;
+  --chrome:        #0f1116;
+  --panel:         #14161b;
+  --panel-2:       #0f1116;
+  --sidebar:       #161a20;
+
+  --border:        #262b34;
+  --border-soft:   #21262d;
+  --border-strong: #30363d;
+
+  --text:          #c9d1d9;
+  --text-strong:   #f0f6fc;
+  --muted:         #8b949e;
+  --faint:         #6e7681;
+
+  --accent:          #4c8dff;
+  --accent-fg:       #79c0ff;
+  --accent-weak:     rgba(76, 141, 255, .10);
+  --accent-strong:   rgba(76, 141, 255, .16);
+  --accent-contrast: #0d1117;
+
+  --add-fg: #3fb950;  --add-bg: rgba(63, 185, 80, .14);
+  --del-fg: #f85149;  --del-bg: rgba(248, 81, 73, .14);
+  --link:   #79c0ff;
+  --danger: #f85149;
+
+  --g-dir:    #e3b341;
+  --g-code:   #4c8dff;
+  --g-doc:    #519aba;
+  --g-data:   #cbcb41;
+  --g-html:   #f0883e;
+  --g-img:    #d2a8ff;
+  --g-diff:   #f0883e;
+
+  color-scheme: dark;
+}
+
+/* auto — follow the OS. Any dark theme that should participate in "auto" needs
+   its token block duplicated here under the media query. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg:            #0f1116;
+    --chrome:        #0f1116;
+    --panel:         #14161b;
+    --panel-2:       #0f1116;
+    --sidebar:       #161a20;
+
+    --border:        #262b34;
+    --border-soft:   #21262d;
+    --border-strong: #30363d;
+
+    --text:          #c9d1d9;
+    --text-strong:   #f0f6fc;
+    --muted:         #8b949e;
+    --faint:         #6e7681;
+
+    --accent:          #4c8dff;
+    --accent-fg:       #79c0ff;
+    --accent-weak:     rgba(76, 141, 255, .10);
+    --accent-strong:   rgba(76, 141, 255, .16);
+    --accent-contrast: #0d1117;
+
+    --add-fg: #3fb950;  --add-bg: rgba(63, 185, 80, .14);
+    --del-fg: #f85149;  --del-bg: rgba(248, 81, 73, .14);
+    --link:   #79c0ff;
+    --danger: #f85149;
+
+    --g-dir:  #e3b341;  --g-code: #4c8dff;  --g-doc: #519aba;
+    --g-data: #cbcb41;  --g-html: #f0883e;  --g-img: #d2a8ff;  --g-diff: #f0883e;
+
+    color-scheme: dark;
+  }
+}
