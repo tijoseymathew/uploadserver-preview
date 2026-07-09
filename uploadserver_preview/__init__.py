@@ -180,24 +180,31 @@ def _dir_index(handler, url_path):
     }
 
 
+def _hljs_css_links(theme):
+    """The highlight.js theme stylesheet link(s) for the given --theme."""
+    if theme == "light":
+        return '<link rel="stylesheet" href="%shljs-github.min.css">' % ASSET_ROUTE
+    if theme == "dark":
+        return '<link rel="stylesheet" href="%shljs-github-dark.min.css">' % ASSET_ROUTE
+    # auto — follow the OS preference
+    return (
+        '<link rel="stylesheet" href="%shljs-github.min.css" media="(prefers-color-scheme: light)">\n'
+        '<link rel="stylesheet" href="%shljs-github-dark.min.css" media="(prefers-color-scheme: dark)">'
+        % (ASSET_ROUTE, ASSET_ROUTE)
+    )
+
+
+def _script_tags(scripts):
+    return "\n".join(
+        '<script defer src="%s%s"></script>' % (ASSET_ROUTE, s) for s in scripts
+    )
+
+
 def get_viewer_page(theme):
     """The static viewer shell. The path is read client-side from ?path=."""
     color_scheme = uploadserver.COLOR_SCHEME.get(theme, "light dark")
-
-    if theme == "light":
-        hljs_css = '<link rel="stylesheet" href="%shljs-github.min.css">' % ASSET_ROUTE
-    elif theme == "dark":
-        hljs_css = '<link rel="stylesheet" href="%shljs-github-dark.min.css">' % ASSET_ROUTE
-    else:  # auto — follow the OS preference
-        hljs_css = (
-            '<link rel="stylesheet" href="%shljs-github.min.css" media="(prefers-color-scheme: light)">\n'
-            '<link rel="stylesheet" href="%shljs-github-dark.min.css" media="(prefers-color-scheme: dark)">'
-            % (ASSET_ROUTE, ASSET_ROUTE)
-        )
-
-    scripts = "\n".join(
-        '<script defer src="%s%s"></script>' % (ASSET_ROUTE, s) for s in _SCRIPTS
-    )
+    hljs_css = _hljs_css_links(theme)
+    scripts = _script_tags(_SCRIPTS)
 
     return (
         """<!DOCTYPE html>
@@ -246,79 +253,92 @@ def get_viewer_page(theme):
     ).encode("utf-8")
 
 
-def _render_listing(handler, fs_path, names):
-    """Build an enhanced directory listing (returns HTML str)."""
+def _tree_row_html(url_path, name, is_dir, full, depth):
+    """One row of the explorer file-tree. Mirrors rowHtml() in explorer.js.
+
+    Directories render a twist/caret button and a lazy-loaded `.tchildren`
+    container; files render a name link (previewable ones carry data-view so the
+    shell loads them into the content pane in place).
+    """
+    esc = _html_escape
+    glyph_cls, glyph_ch = _kind_glyph(name, is_dir)
+    quoted = urllib.parse.quote(name)
+    style = ' style="--depth:%d"' % depth
+    if is_dir:
+        dpath = url_path + quoted + "/"
+        return (
+            '<div class="trow isdir" data-path="%s"%s>'
+            '<button class="twist glyph %s" type="button" aria-expanded="false" '
+            'aria-label="Toggle %s">%s</button>'
+            '<span class="tname">%s</span>'
+            '</div><div class="tchildren" hidden></div>'
+            % (esc(dpath), style, glyph_cls, esc(name), glyph_ch, esc(name))
+        )
+    try:
+        size_h = _human_size(os.path.getsize(full))
+    except OSError:
+        size_h = ""
+    abs_url = url_path + quoted
+    if _is_previewable(name):
+        view = VIEW_ROUTE + "?path=" + urllib.parse.quote(abs_url, safe="")
+        anchor = '<a class="tname" href="%s" data-view="%s">%s</a>' % (
+            esc(view), esc(view), esc(name)
+        )
+    else:
+        anchor = '<a class="tname" href="%s" download>%s</a>' % (esc(quoted), esc(name))
+    return (
+        '<div class="trow isfile"%s>'
+        '<span class="twist-spacer" aria-hidden="true"></span>'
+        '<span class="glyph %s" aria-hidden="true">%s</span>'
+        '%s<span class="tsize">%s</span>'
+        "</div>"
+        % (style, glyph_cls, glyph_ch, anchor, size_h)
+    )
+
+
+def _breadcrumbs_html(url_path):
+    """Breadcrumb trail for the directory at `url_path` (unquoted, ends in '/')."""
+    esc = _html_escape
+    parts = ['<a href="/">~</a>']
+    acc = ""
+    for i, seg in enumerate(s for s in url_path.strip("/").split("/") if s):
+        acc += "/" + urllib.parse.quote(seg)
+        parts.append('<span class="sep">/</span>')
+        parts.append('<a href="%s/">%s</a>' % (acc, esc(seg)))
+    # mark the last crumb as current
+    if len(parts) > 1:
+        segs = [s for s in url_path.strip("/").split("/") if s]
+        last = esc(segs[-1])
+        parts[-1] = '<span class="here">%s</span>' % last
+    return "".join(parts)
+
+
+def _render_shell(handler, fs_path, names):
+    """The unified explorer shell: a persistent file-tree beside a content pane.
+
+    The tree for the current directory is rendered server-side (so it works
+    without JS); explorer.js then takes over — expanding folders and loading
+    files into the pane via fetch(), without a full navigation.
+    """
     theme = getattr(uploadserver.args, "theme", "auto")
     url_path = urllib.parse.unquote(handler.path.split("?", 1)[0])
     if not url_path.endswith("/"):
         url_path += "/"
 
-    # dirs first, then files; case-insensitive
-    entries = []
-    for name in names:
-        full = os.path.join(fs_path, name)
-        is_dir = os.path.isdir(full)
-        entries.append((name, is_dir, full))
-    entries.sort(key=lambda e: (not e[1], e[0].lower()))
-
+    entries = _list_entries(fs_path, names)
     esc = _html_escape
 
-    # breadcrumb across the current path
-    crumb_parts = ['<a href="/">~</a>']
-    acc = ""
+    crumbs = _breadcrumbs_html(url_path)
+    rows = "".join(_tree_row_html(url_path, n, d, f, 0) for (n, d, f) in entries)
+    if not rows:
+        rows = '<div class="empty">This folder is empty.</div>'
+
     segs = [s for s in url_path.strip("/").split("/") if s]
-    for i, seg in enumerate(segs):
-        acc += "/" + urllib.parse.quote(seg)
-        crumb_parts.append('<span class="sep">/</span>')
-        if i < len(segs) - 1:
-            crumb_parts.append('<a href="%s/">%s</a>' % (acc, esc(seg)))
-        else:
-            crumb_parts.append('<span class="here">%s</span>' % esc(seg))
-    crumbs = "".join(crumb_parts)
-
-    rows = []
-    for name, is_dir, full in entries:
-        glyph_cls, glyph_ch = _kind_glyph(name, is_dir)
-        display = name + ("/" if is_dir else "")
-        quoted = urllib.parse.quote(name)
-        if is_dir:
-            href = quoted + "/"
-            rows.append(
-                '<div class="row isdir">'
-                '<span class="name"><span class="glyph %s" aria-hidden="true">%s</span>'
-                '<a href="%s">%s</a></span>'
-                '<span class="size">&mdash;</span>'
-                '<span class="raw-link"></span>'
-                "</div>"
-                % (glyph_cls, glyph_ch, href, esc(display))
-            )
-        else:
-            try:
-                size = os.path.getsize(full)
-                size_h = _human_size(size)
-            except OSError:
-                size_h = ""
-            abs_url = url_path + quoted
-            if _is_previewable(name):
-                name_href = VIEW_ROUTE + "?path=" + urllib.parse.quote(abs_url, safe="")
-            else:
-                name_href = quoted  # direct download
-            rows.append(
-                '<div class="row">'
-                '<span class="name"><span class="glyph %s" aria-hidden="true">%s</span>'
-                '<a href="%s">%s</a></span>'
-                '<span class="size">%s</span>'
-                '<a class="raw-link" href="%s" target="_blank" rel="noopener">raw</a>'
-                "</div>"
-                % (glyph_cls, glyph_ch, name_href, esc(display), size_h, quoted)
-            )
-
-    body_rows = "".join(rows) if rows else '<div class="empty">This folder is empty.</div>'
-
-    # title-bar label: the folder we're serving (root shows a friendly name)
     folder = segs[-1] if segs else "~"
     n = len(entries)
-    footer = "%d item%s &middot; use Upload to add files" % (n, "" if n == 1 else "s")
+    footer = "%d item%s" % (n, "" if n == 1 else "s")
+
+    scripts = _script_tags(_SCRIPTS + ("explorer.js",))
 
     return """<!DOCTYPE html>
 <html lang="en" data-theme="%(theme)s">
@@ -329,37 +349,58 @@ def _render_listing(handler, fs_path, names):
 <title>%(title)s</title>
 <link rel="stylesheet" href="%(route)sthemes.css">
 <link rel="stylesheet" href="%(route)sapp.css">
+<link rel="stylesheet" href="%(route)sdiff2html.min.css">
+%(hljs_css)s
 </head>
 <body>
-<div class="app">
+<div class="app app--shell">
   <div class="titlebar">
     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-    <span class="title">%(folder)s &mdash; client-side explorer</span>
+    <span class="title" id="titlelabel">%(folder)s &mdash; explorer</span>
     <span class="chip"><span class="led" aria-hidden="true"></span>local</span>
   </div>
-  <div class="exp-head">
-    <nav class="crumbs" aria-label="Breadcrumb">%(crumbs)s</nav>
-    <span class="exp-actions">
-      <a class="btn btn-accent" href="/upload">&#8593; Upload</a>
-    </span>
-  </div>
-  <div class="tree">
-    <div class="tree-inner">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="side-head">
+        <span class="exp-label">Explorer</span>
+        <a class="btn btn-accent btn-sm" href="/upload">&#8593; Upload</a>
+      </div>
+      <div class="tree" id="tree">
+        <div class="tree-inner">
 %(rows)s
-    </div>
+        </div>
+      </div>
+      <div class="exp-foot">%(footer)s</div>
+    </aside>
+    <section class="pane">
+      <header class="topbar">
+        <nav class="crumbs" id="crumbs" aria-label="Breadcrumb">%(crumbs)s</nav>
+        <span class="spacer"></span>
+        <span class="badge" id="kind"></span>
+        <span class="meta" id="meta"></span>
+        <div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>
+          <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
+          <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
+        </div>
+        <a class="raw" id="rawlink" href="#" hidden>raw &#8599;</a>
+      </header>
+      <main id="content" class="content"><div class="empty-pane">Select a file to preview.</div></main>
+    </section>
   </div>
-  <div class="exp-foot">%(footer)s</div>
 </div>
+%(scripts)s
 </body>
 </html>""" % {
         "theme": theme,
         "color_scheme": uploadserver.COLOR_SCHEME.get(theme, "light dark"),
         "title": esc(url_path),
         "route": ASSET_ROUTE,
+        "hljs_css": _hljs_css_links(theme),
         "folder": esc(folder),
         "crumbs": crumbs,
-        "rows": body_rows,
+        "rows": rows,
         "footer": footer,
+        "scripts": scripts,
     }
 
 
@@ -435,7 +476,7 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
             self.send_error(http.HTTPStatus.NOT_FOUND, "No permission to list directory")
             return None
         try:
-            body = _render_listing(self, path, names).encode("utf-8", "surrogateescape")
+            body = _render_shell(self, path, names).encode("utf-8", "surrogateescape")
         except Exception:
             # If anything goes wrong, fall back to uploadserver's plain listing.
             return super().list_directory(path)

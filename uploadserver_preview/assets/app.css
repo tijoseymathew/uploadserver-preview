@@ -228,6 +228,129 @@ a:hover { text-decoration: underline; }
 .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 28px 12px; }
 
 /* ===========================================================================
+   Unified explorer shell — persistent file-tree beside the content pane.
+   The shell app fills the viewport exactly; the tree and the pane each scroll
+   independently (IDE-style) rather than the whole page scrolling.
+   =========================================================================== */
+.app--shell {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.shell {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;            /* let children own their scroll */
+}
+.sidebar {
+  flex: 0 0 300px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+.side-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+.side-head .exp-label { flex: 1 1 auto; }
+.btn-sm { font-size: 11.5px; padding: 4px 9px; }
+
+.pane {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--panel);
+}
+/* inside the pane the top bar pins to the pane, not the (non-scrolling) app */
+.pane > .topbar { position: static; top: auto; }
+.pane > .content {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* file-tree rows (server-rendered at depth 0; deeper levels injected by JS) */
+.trow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px calc(10px + var(--depth, 0) * 15px);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.trow:hover { background: var(--accent-weak); }
+.trow.active { background: var(--accent-weak); box-shadow: inset 2px 0 0 var(--accent); }
+.trow .tname {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.trow .tname:hover { text-decoration: none; color: var(--text-strong); }
+.trow.isdir .tname { color: var(--text-strong); font-weight: 600; }
+.trow .tsize {
+  margin-left: auto;
+  padding-left: 10px;
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.twist {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  flex: 0 0 auto;
+  width: 14px;
+  text-align: center;
+  line-height: 1;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform .12s ease;
+}
+@media (prefers-reduced-motion: reduce) { .twist { transition: none; } }
+.trow.isdir.open > .twist { transform: rotate(90deg); }
+.twist-spacer { flex: 0 0 auto; width: 14px; }
+.tnote {
+  padding: 4px 10px 4px calc(10px + var(--depth, 0) * 15px);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.empty-pane {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 20px 2px;
+}
+
+/* stack the tree above the pane on narrow screens */
+@media (max-width: 760px) {
+  .shell { flex-direction: column; }
+  .sidebar {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: 42vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+/* ===========================================================================
    Viewer top bar
    =========================================================================== */
 .topbar {
