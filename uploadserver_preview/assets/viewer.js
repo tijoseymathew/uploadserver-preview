@@ -6,8 +6,6 @@
   'use strict';
 
   var content = document.getElementById('content');
-  var params = new URLSearchParams(location.search);
-  var path = params.get('path');
 
   var DARK = (function () {
     var t = document.documentElement.getAttribute('data-theme');
@@ -257,36 +255,21 @@
     return false;
   }
 
-  // ---------- main ----------
-  if (!path) { setError('No file specified', 'This page expects a ?path= parameter.'); return; }
-
-  var name = baseName(decode(path));
-  document.title = name + ' · preview';
-  var titlelabel = document.getElementById('titlelabel');
-  if (titlelabel) titlelabel.textContent = name;
-
-  var raw = document.getElementById('rawlink');
-  raw.href = path; raw.target = '_blank'; raw.rel = 'noopener noreferrer';
-  var back = document.getElementById('backlink');
-  var dir = decode(path).replace(/[^\/]*$/, '');
-  back.href = dir || '/';
-  buildCrumbs(path);
-
-  var lower = name.toLowerCase();
-  var ext = extOf(lower);
-  var kind = KIND[ext] || NAME_MAP[lower] || null;
-  if (!kind) kind = mk('code', ext || 'file', null); // unknown -> try as text
-
-  document.getElementById('kind').textContent = kind.label;
-
-  // Rendered/Raw view toggle. Only meaningful for kinds that have a distinct
-  // rendered form; plain code and images look the same either way.
+  // ---------- Rendered/Raw view toggle ----------
+  // Only meaningful for kinds that have a distinct rendered form; plain code and
+  // images look the same either way. VIEW holds the currently-loaded file so the
+  // toggle can re-render it and so load() can be called again for a new file.
   var HAS_RENDERED = { markdown: 1, json: 1, csv: 1, tsv: 1, diff: 1 };
-  var VIEW = { text: null, mode: 'rendered' };
+  var VIEW = { text: null, mode: 'rendered', kind: null };
+
+  var toggle = document.getElementById('viewtoggle');
+  var btnRendered = document.getElementById('btn-rendered');
+  var btnRaw = document.getElementById('btn-raw');
 
   function renderCurrent() {
     content.innerHTML = '';
-    var text = VIEW.text;
+    var text = VIEW.text, kind = VIEW.kind;
+    if (!kind) return;
     if (VIEW.mode === 'raw') { return renderCode(text, kind.lang); }
     switch (kind.type) {
       case 'markdown': return renderMarkdown(text);
@@ -301,9 +284,6 @@
     }
   }
 
-  var toggle = document.getElementById('viewtoggle');
-  var btnRendered = document.getElementById('btn-rendered');
-  var btnRaw = document.getElementById('btn-raw');
   function setMode(m) {
     if (VIEW.mode === m) return;
     VIEW.mode = m;
@@ -314,25 +294,70 @@
   if (btnRendered) btnRendered.addEventListener('click', function () { setMode('rendered'); });
   if (btnRaw) btnRaw.addEventListener('click', function () { setMode('raw'); });
 
-  fetch(path, { credentials: 'same-origin' }).then(function (res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
-    var len = parseInt(res.headers.get('Content-Length') || '0', 10);
+  // ---------- load a file into the content pane ----------
+  // Fetches `path` same-origin and renders it, updating the header (title,
+  // breadcrumb, kind badge, raw link, meta). Callable repeatedly — this is the
+  // seam the unified explorer shell uses to swap the content pane in place.
+  function load(path) {
+    if (!path) { setError('No file specified', 'This page expects a ?path= parameter.'); return; }
 
-    if (kind.type === 'image') { content.innerHTML = ''; return renderImage(path, name); }
+    // reset per-file header + view state
+    content.innerHTML = '<div class="loading">Loading…</div>';
+    VIEW.text = null; VIEW.mode = 'rendered';
+    if (btnRendered) btnRendered.setAttribute('aria-pressed', 'true');
+    if (btnRaw) btnRaw.setAttribute('aria-pressed', 'false');
+    if (toggle) toggle.hidden = true;
 
-    return res.text().then(function (text) {
-      content.innerHTML = '';
-      var isText = kind.type !== 'image';
-      if (isText && (kind.lang == null) && looksBinary(text) && !(ext in KIND) && !(lower in NAME_MAP)) {
-        setMeta(len, null);
-        return setError('Binary file', 'This does not look like a text file, so there is nothing to format.', path);
-      }
-      setMeta(len, text);
-      VIEW.text = text;
-      if (toggle && HAS_RENDERED[kind.type]) toggle.hidden = false;
-      renderCurrent();
+    var name = baseName(decode(path));
+    document.title = name + ' · preview';
+    var titlelabel = document.getElementById('titlelabel');
+    if (titlelabel) titlelabel.textContent = name;
+
+    var raw = document.getElementById('rawlink');
+    if (raw) { raw.href = path; raw.target = '_blank'; raw.rel = 'noopener noreferrer'; }
+    var back = document.getElementById('backlink');
+    if (back) { var dir = decode(path).replace(/[^\/]*$/, ''); back.href = dir || '/'; }
+    buildCrumbs(path);
+
+    var lower = name.toLowerCase();
+    var ext = extOf(lower);
+    var kind = KIND[ext] || NAME_MAP[lower] || null;
+    if (!kind) kind = mk('code', ext || 'file', null); // unknown -> try as text
+    VIEW.kind = kind;
+
+    var kindEl = document.getElementById('kind');
+    if (kindEl) kindEl.textContent = kind.label;
+
+    fetch(path, { credentials: 'same-origin' }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+      var len = parseInt(res.headers.get('Content-Length') || '0', 10);
+
+      if (kind.type === 'image') { content.innerHTML = ''; return renderImage(path, name); }
+
+      return res.text().then(function (text) {
+        content.innerHTML = '';
+        var isText = kind.type !== 'image';
+        if (isText && (kind.lang == null) && looksBinary(text) && !(ext in KIND) && !(lower in NAME_MAP)) {
+          setMeta(len, null);
+          return setError('Binary file', 'This does not look like a text file, so there is nothing to format.', path);
+        }
+        setMeta(len, text);
+        VIEW.text = text;
+        if (toggle && HAS_RENDERED[kind.type]) toggle.hidden = false;
+        renderCurrent();
+      });
+    }).catch(function (e) {
+      setError('Could not load file', e.message, path);
     });
-  }).catch(function (e) {
-    setError('Could not load file', e.message, path);
-  });
+  }
+
+  // Public API for the explorer shell.
+  window.PreviewViewer = { load: load };
+
+  // Standalone viewer page (/__view__): auto-load the ?path= file. Skipped when a
+  // #tree is present — there the explorer shell drives loading instead.
+  if (content && !document.getElementById('tree')) {
+    var params = new URLSearchParams(location.search);
+    load(params.get('path'));
+  }
 })();
