@@ -29,7 +29,7 @@
     csv: mk('csv', 'csv'), tsv: mk('tsv', 'tsv'),
     diff: mk('diff', 'diff'), patch: mk('diff', 'patch'),
     html: mk('html-source', 'html', 'xml'), htm: mk('html-source', 'html', 'xml'),
-    xhtml: mk('html-source', 'xhtml', 'xml'), xml: mk('html-source', 'xml', 'xml'),
+    xhtml: mk('html-source', 'xhtml', 'xml'), xml: mk('code', 'xml', 'xml'),
     py: mk('code', 'python', 'python'), pyw: mk('code', 'python', 'python'),
     js: mk('code', 'javascript', 'javascript'), mjs: mk('code', 'javascript', 'javascript'),
     cjs: mk('code', 'javascript', 'javascript'), jsx: mk('code', 'jsx', 'javascript'),
@@ -207,6 +207,27 @@
     content.appendChild(wrap);
   }
 
+  // Live HTML preview in a locked-down <iframe sandbox>. The empty sandbox token
+  // blocks scripts, forms, popups and same-origin access, so the uploaded page
+  // renders (markup + styles) but can neither run code nor touch this session.
+  // "Open ↗" (see load) is the opt-in, un-sandboxed escape hatch in a new tab.
+  function renderHtmlPreview(path, kind) {
+    content.appendChild(noticeEl(
+      'Live preview in a locked-down sandbox — scripts and forms are blocked. ' +
+      'Use “Open ↗” above to run the page in a new tab without the sandbox.'
+    ));
+    var wrap = elem('div', 'htmlpreview');
+    var frame = document.createElement('iframe');
+    frame.className = 'htmlframe';
+    frame.title = (kind && kind.label ? kind.label : 'HTML') + ' preview';
+    frame.setAttribute('sandbox', '');               // most restrictive: no scripts/forms/same-origin
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    frame.setAttribute('loading', 'lazy');
+    frame.src = path;
+    wrap.appendChild(frame);
+    content.appendChild(wrap);
+  }
+
   function renderCode(text, lang, notice) {
     if (text.length > MAX_TEXT) {
       notice = (notice ? notice + ' ' : '') + 'File is large — showing the first ' + humanSize(MAX_TEXT) + '.';
@@ -259,8 +280,8 @@
   // Only meaningful for kinds that have a distinct rendered form; plain code and
   // images look the same either way. VIEW holds the currently-loaded file so the
   // toggle can re-render it and so load() can be called again for a new file.
-  var HAS_RENDERED = { markdown: 1, json: 1, csv: 1, tsv: 1, diff: 1 };
-  var VIEW = { text: null, mode: 'rendered', kind: null };
+  var HAS_RENDERED = { markdown: 1, json: 1, csv: 1, tsv: 1, diff: 1, 'html-source': 1 };
+  var VIEW = { text: null, mode: 'rendered', kind: null, path: null };
 
   var toggle = document.getElementById('viewtoggle');
   var btnRendered = document.getElementById('btn-rendered');
@@ -277,9 +298,7 @@
       case 'csv': return renderTable(text, ',');
       case 'tsv': return renderTable(text, '\t');
       case 'diff': return renderDiff(text);
-      case 'html-source':
-        content.appendChild(noticeEl('Shown as source. Uploaded HTML is never executed by the previewer.'));
-        return renderCode(text, kind.lang);
+      case 'html-source': return renderHtmlPreview(VIEW.path, kind);
       default: return renderCode(text, kind.lang);
     }
   }
@@ -303,7 +322,7 @@
 
     // reset per-file header + view state
     content.innerHTML = '<div class="loading">Loading…</div>';
-    VIEW.text = null; VIEW.mode = 'rendered';
+    VIEW.text = null; VIEW.mode = 'rendered'; VIEW.path = path;
     if (btnRendered) btnRendered.setAttribute('aria-pressed', 'true');
     if (btnRaw) btnRaw.setAttribute('aria-pressed', 'false');
     if (toggle) toggle.hidden = true;
@@ -327,6 +346,18 @@
 
     var kindEl = document.getElementById('kind');
     if (kindEl) kindEl.textContent = kind.label;
+
+    // "Open ↗": for HTML only, open the page in a new tab where the sandbox
+    // used by the in-pane preview does not apply (scripts run, full navigation).
+    var openlink = document.getElementById('openlink');
+    if (openlink) {
+      if (kind.type === 'html-source') {
+        openlink.href = path; openlink.target = '_blank';
+        openlink.rel = 'noopener noreferrer'; openlink.hidden = false;
+      } else {
+        openlink.hidden = true; openlink.removeAttribute('href');
+      }
+    }
 
     fetch(path, { credentials: 'same-origin' }).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
