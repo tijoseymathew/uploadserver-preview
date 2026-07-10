@@ -176,6 +176,8 @@
     if (anchor) lastDir = parentDirOf(anchor);
     if (rawlink) rawlink.hidden = false;
     markActive(anchor);
+    // on mobile, fold the navigator sheet so the file is what you land on
+    if (window.PreviewNav) window.PreviewNav.close();
     if (push) {
       history.pushState({ view: filePath }, '', location.pathname + '?view=' + encodeURIComponent(filePath));
     }
@@ -188,6 +190,8 @@
     if (metaEl) metaEl.textContent = '';
     if (toggle) toggle.hidden = true;
     markActive(null);
+    // nothing to show — surface the navigator by default on mobile
+    if (window.PreviewNav) window.PreviewNav.open();
   }
 
   // ---------- events ----------
