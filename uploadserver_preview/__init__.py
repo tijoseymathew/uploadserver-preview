@@ -390,7 +390,7 @@ def _render_shell(handler, fs_path, names):
     n = len(entries)
     footer = "%d item%s" % (n, "" if n == 1 else "s")
 
-    scripts = _script_tags(_SCRIPTS + ("explorer.js", "upload.js"))
+    scripts = _script_tags(_SCRIPTS + ("explorer.js", "upload.js", "mobile.js"))
 
     return """<!DOCTYPE html>
 <html lang="en" data-theme="%(theme)s">
@@ -405,11 +405,13 @@ def _render_shell(handler, fs_path, names):
 <div class="app app--shell">
   <div class="titlebar">
     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle file navigator" aria-controls="nav-sheet" aria-expanded="false">&#9776;</button>
     <span class="title" id="titlelabel">%(folder)s &mdash; explorer</span>
     <span class="chip"><span class="led" aria-hidden="true"></span>local</span>
   </div>
   <div class="shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="nav-sheet">
+      <div class="sheet-grab" id="sheet-grab" aria-hidden="true"><span class="grabber"></span></div>
       <div class="side-head">
         <span class="exp-label">Explorer</span>
         <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
@@ -439,6 +441,8 @@ def _render_shell(handler, fs_path, names):
       <main id="content" class="content"><div class="empty-pane">Select a file to preview.</div></main>
     </section>
   </div>
+  <div class="nav-backdrop" id="nav-backdrop"></div>
+  <button class="nav-peek" id="nav-peek" type="button" aria-label="Show file navigator" aria-controls="nav-sheet"><span class="peek-grip" aria-hidden="true"></span></button>
   <div class="drop-overlay" id="drop-overlay" hidden aria-hidden="true">
     <div class="drop-overlay-inner"><span class="do-glyph" aria-hidden="true">&#8593;</span>Drop files to upload</div>
   </div>
