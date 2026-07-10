@@ -298,22 +298,27 @@
     return false;
   }
 
-  // ---------- Rendered/Raw view toggle ----------
-  // Only meaningful for kinds that have a distinct rendered form; plain code and
-  // images look the same either way. VIEW holds the currently-loaded file so the
-  // toggle can re-render it and so load() can be called again for a new file.
+  // ---------- Rendered/Raw/Diff view toggle ----------
+  // "Rendered" is only offered for kinds with a distinct rendered form; plain
+  // code shows Raw (and Diff, when git reports the file changed vs the compare
+  // base — see git.js/window.PreviewGit). VIEW holds the currently-loaded file
+  // so the toggle can re-render it and load() can be called again for a new one.
   var HAS_RENDERED = { markdown: 1, json: 1, csv: 1, tsv: 1, diff: 1, 'html-source': 1 };
-  var VIEW = { text: null, mode: 'rendered', kind: null, path: null };
+  var VIEW = { text: null, mode: 'rendered', kind: null, path: null, diffable: false };
 
   var toggle = document.getElementById('viewtoggle');
   var btnRendered = document.getElementById('btn-rendered');
   var btnRaw = document.getElementById('btn-raw');
+  var btnDiff = document.getElementById('btn-diff');
+
+  function canRender() { return !!(VIEW.kind && HAS_RENDERED[VIEW.kind.type]); }
 
   function renderCurrent() {
     content.innerHTML = '';
     var text = VIEW.text, kind = VIEW.kind;
     if (!kind) return;
-    if (VIEW.mode === 'raw') { return renderCode(text, kind.lang); }
+    if (VIEW.mode === 'diff') { return renderDiffMode(); }
+    if (VIEW.mode === 'raw' || !HAS_RENDERED[kind.type]) { return renderCode(text, kind.lang); }
     switch (kind.type) {
       case 'markdown': return renderMarkdown(text);
       case 'json': return renderJson(text, kind);
@@ -325,15 +330,55 @@
     }
   }
 
+  // Diff mode: fetch this file's unified diff vs the compare base (git.js owns
+  // the base) and render it with diff2html. Guards against the user switching
+  // file or mode while the fetch is in flight.
+  function renderDiffMode() {
+    var path = VIEW.path;
+    content.innerHTML = '<div class="loading">Loading diff…</div>';
+    if (!window.PreviewGit) { content.innerHTML = ''; return renderCode(VIEW.text || '', VIEW.kind && VIEW.kind.lang); }
+    window.PreviewGit.fetchDiff(path).then(function (text) {
+      if (VIEW.path !== path || VIEW.mode !== 'diff') return;
+      content.innerHTML = '';
+      if (!text) {
+        content.appendChild(noticeEl('No changes against ' + (window.PreviewGit.base() || 'the compare base') + '.'));
+        return;
+      }
+      renderDiff(text);
+    }).catch(function (e) {
+      if (VIEW.path !== path || VIEW.mode !== 'diff') return;
+      setError('Could not load diff', e.message);
+    });
+  }
+
   function setMode(m) {
     if (VIEW.mode === m) return;
+    if (m === 'diff' && !VIEW.diffable) return;
     VIEW.mode = m;
     if (btnRendered) btnRendered.setAttribute('aria-pressed', String(m === 'rendered'));
     if (btnRaw) btnRaw.setAttribute('aria-pressed', String(m === 'raw'));
+    if (btnDiff) btnDiff.setAttribute('aria-pressed', String(m === 'diff'));
     renderCurrent();
   }
   if (btnRendered) btnRendered.addEventListener('click', function () { setMode('rendered'); });
   if (btnRaw) btnRaw.addEventListener('click', function () { setMode('raw'); });
+  if (btnDiff) btnDiff.addEventListener('click', function () { setMode('diff'); });
+
+  // Re-sync the git-dependent bits of the toggle: called after the file's text
+  // arrives, and by git.js whenever /__git__ status lands or the compare base
+  // changes. Shows the Diff button only for changed files; if the file stops
+  // being "changed" while diff mode is open, falls back to a sensible mode.
+  function syncGit() {
+    var diffable = !!(VIEW.text != null && window.PreviewGit && VIEW.path &&
+                      window.PreviewGit.changeFor(VIEW.path));
+    VIEW.diffable = diffable;
+    if (btnDiff) btnDiff.hidden = !diffable;
+    if (toggle) toggle.hidden = !(VIEW.text != null && (canRender() || diffable));
+    if (VIEW.mode === 'diff') {
+      if (!diffable) setMode(canRender() ? 'rendered' : 'raw');
+      else renderCurrent(); // the compare base may have changed — refetch
+    }
+  }
 
   // ---------- load a file into the content pane ----------
   // Fetches `path` same-origin and renders it, updating the header (title,
@@ -344,10 +389,9 @@
 
     // reset per-file header + view state
     content.innerHTML = '<div class="loading">Loading…</div>';
-    VIEW.text = null; VIEW.mode = 'rendered'; VIEW.path = path;
-    if (btnRendered) btnRendered.setAttribute('aria-pressed', 'true');
-    if (btnRaw) btnRaw.setAttribute('aria-pressed', 'false');
+    VIEW.text = null; VIEW.path = path; VIEW.diffable = false;
     if (toggle) toggle.hidden = true;
+    if (btnDiff) { btnDiff.hidden = true; btnDiff.setAttribute('aria-pressed', 'false'); }
 
     var name = baseName(decode(path));
     document.title = name + ' · preview';
@@ -365,6 +409,14 @@
     var kind = KIND[ext] || NAME_MAP[lower] || null;
     if (!kind) kind = mk('code', ext || 'file', null); // unknown -> try as text
     VIEW.kind = kind;
+
+    // kinds without a distinct rendered form only offer Raw (and maybe Diff)
+    VIEW.mode = HAS_RENDERED[kind.type] ? 'rendered' : 'raw';
+    if (btnRendered) {
+      btnRendered.hidden = !HAS_RENDERED[kind.type];
+      btnRendered.setAttribute('aria-pressed', String(VIEW.mode === 'rendered'));
+    }
+    if (btnRaw) btnRaw.setAttribute('aria-pressed', String(VIEW.mode === 'raw'));
 
     var kindEl = document.getElementById('kind');
     if (kindEl) kindEl.textContent = kind.label;
@@ -396,7 +448,7 @@
         }
         setMeta(len, text);
         VIEW.text = text;
-        if (toggle && HAS_RENDERED[kind.type]) toggle.hidden = false;
+        syncGit();
         renderCurrent();
       });
     }).catch(function (e) {
@@ -404,8 +456,8 @@
     });
   }
 
-  // Public API for the explorer shell.
-  window.PreviewViewer = { load: load };
+  // Public API for the explorer shell (load) and the git layer (syncGit).
+  window.PreviewViewer = { load: load, syncGit: syncGit };
 
   // Standalone viewer page (/__view__): auto-load the ?path= file. Skipped when a
   // #tree is present — there the explorer shell drives loading instead.
