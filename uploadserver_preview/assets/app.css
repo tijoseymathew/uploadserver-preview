@@ -347,16 +347,111 @@ a:hover { text-decoration: underline; }
   padding: 20px 2px;
 }
 
-/* stack the tree above the pane on narrow screens */
+/* ---------------------------------------------------------------------------
+   Mobile navigator (design reference 1a) — on narrow screens the sidebar
+   collapses into a swipe-up bottom sheet, driven by a titlebar hamburger and a
+   bottom-edge grip. The shell folds it away when a file opens and opens it by
+   default when nothing is shown (see mobile.js + explorer.js). On desktop every
+   sheet piece below is kept hidden.
+   =========================================================================== */
+.nav-toggle {
+  display: none;
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 2px 4px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.nav-toggle:hover { color: var(--text-strong); }
+.sheet-grab,
+.nav-peek,
+.nav-backdrop { display: none; }
+
 @media (max-width: 760px) {
-  .shell { flex-direction: column; }
+  .nav-toggle { display: inline-flex; align-items: center; }
+
+  /* the sidebar lifts out of flow into a bottom sheet, off-screen until opened */
   .sidebar {
-    flex: 0 0 auto;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
-    max-height: 42vh;
+    height: 80vh;
+    height: 80dvh;
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid var(--border-strong);
+    border-top-left-radius: var(--radius-lg, 12px);
+    border-top-right-radius: var(--radius-lg, 12px);
+    box-shadow: 0 -14px 44px rgba(0, 0, 0, .4);
+    z-index: 50;
+    transform: translateY(100%);
+    transition: transform .28s cubic-bezier(.32, .72, 0, 1);
+    will-change: transform;
   }
+  .app--shell.nav-open .sidebar { transform: translateY(0); }
+  @media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
+
+  /* drag handle at the top of the sheet — swipe down (or tap) to fold */
+  .sheet-grab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    height: 22px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .sheet-grab .grabber {
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-strong);
+  }
+
+  /* dim the pane and swallow taps behind the open sheet */
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .28s ease;
+  }
+  .app--shell.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+
+  /* swipe-up affordance pinned to the bottom edge while the sheet is closed */
+  .nav-peek {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: 160px;
+    padding: 7px 0 9px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    touch-action: none;
+    transition: opacity .2s ease;
+  }
+  .nav-peek .peek-grip {
+    width: 46px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    box-shadow: 0 1px 0 var(--bg);
+  }
+  .app--shell.nav-open .nav-peek { opacity: 0; pointer-events: none; }
 }
 
 /* ===========================================================================
