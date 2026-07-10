@@ -253,7 +253,7 @@ def _resolve_git_dir(handler, url_path):
 
 
 def _chip_html(fs_dir):
-    """The titlebar context chip: the git branch when browsing a repo, else "local".
+    """The context chip: the git branch when browsing a repo, else "local".
 
     Server-rendered so it is right without JS; git.js refreshes the label (and
     keeps it in sync with the compare picker) once /__git__ answers.
@@ -323,11 +323,6 @@ def get_viewer_page(theme, git_dir=None):
 </head>
 <body>
 <div class="app">
-  <div class="titlebar">
-    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-    <span class="title" id="titlelabel">preview</span>
-    %(chip)s
-  </div>
   <header class="topbar">
     <a class="back" id="backlink" href="/" title="Back to folder" aria-label="Back to folder">&larr;</a>
     <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
@@ -341,6 +336,7 @@ def get_viewer_page(theme, git_dir=None):
     </div>
     <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
     <a class="raw" id="rawlink" href="#">raw &#8599;</a>
+    %(chip)s
   </header>
   <main id="content" class="content"><div class="loading">Loading&hellip;</div></main>
 </div>
@@ -440,8 +436,6 @@ def _render_shell(handler, fs_path, names, url_path=None):
     if not rows:
         rows = '<div class="empty">This folder is empty.</div>'
 
-    segs = [s for s in url_path.strip("/").split("/") if s]
-    folder = segs[-1] if segs else "~"
     n = len(entries)
     n_hidden = sum(1 for e in entries if e[3])
     footer = "%d item%s" % (n, "" if n == 1 else "s")
@@ -461,12 +455,6 @@ def _render_shell(handler, fs_path, names, url_path=None):
 </head>
 <body>
 <div class="app app--shell">
-  <div class="titlebar">
-    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle file navigator" aria-controls="nav-sheet" aria-expanded="false">&#9776;</button>
-    <span class="title" id="titlelabel">%(folder)s &mdash; explorer</span>
-    %(chip)s
-  </div>
   <div class="shell">
     <aside class="sidebar" id="nav-sheet">
       <div class="sheet-grab" id="sheet-grab" aria-hidden="true"><span class="grabber"></span></div>
@@ -483,11 +471,13 @@ def _render_shell(handler, fs_path, names, url_path=None):
       </div>
       <div class="exp-foot">
         <span id="exp-foot">%(footer)s</span>
+        %(chip)s
         <span class="exp-version" title="uploadserver-preview %(version)s">v%(version)s</span>
       </div>
     </aside>
     <section class="pane">
       <header class="topbar">
+        <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle file navigator" aria-controls="nav-sheet" aria-expanded="false">&#9776;</button>
         <nav class="crumbs" id="crumbs" aria-label="Breadcrumb">%(crumbs)s</nav>
         <div class="gitbar" id="gitbar" hidden>
           <span class="git-glyph" aria-hidden="true">&#9095;</span>
@@ -547,7 +537,6 @@ def _render_shell(handler, fs_path, names, url_path=None):
         "color_scheme": uploadserver.COLOR_SCHEME.get(theme, "light dark"),
         "title": esc(url_path),
         "head_links": _head_links(theme),
-        "folder": esc(folder),
         "chip": _chip_html(fs_path),
         "crumbs": crumbs,
         "cwd": esc(url_path),

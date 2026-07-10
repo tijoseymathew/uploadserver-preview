@@ -1,6 +1,6 @@
 /* uploadserver-preview — git surfaces.
-   Fetches /__git__ and drives everything git-shaped in the UI: the titlebar
-   branch chip, the sidebar gitbar ("Comparing <base> ← <branch>" + the base
+   Fetches /__git__ and drives everything git-shaped in the UI: the context
+   branch chip, the topbar gitbar ("Comparing <base> ← <branch>" + the base
    picker + the +N/−M counts), per-file M/A/D badges and folder change-dots in
    the explorer tree, and the changed-file signal the viewer's Diff toggle
    needs (window.PreviewGit). Outside a git repo (or without git) the server

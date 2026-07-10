@@ -1,6 +1,6 @@
 /* uploadserver-preview — mobile navigator.
    On narrow screens the explorer sidebar is a bottom sheet. This drives it:
-   a titlebar hamburger toggles it, a bottom-edge grip and the sheet's own grab
+   a topbar hamburger toggles it, a bottom-edge grip and the sheet's own grab
    handle follow the finger (swipe up to reveal, swipe down to fold), the
    backdrop and Escape close it. Exposes window.PreviewNav so the explorer can
    fold the sheet on file open and reopen it when nothing is shown.

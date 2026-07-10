@@ -59,7 +59,7 @@ def _head(root):
 def head_label(root):
     """The branch name (or short SHA when detached), or None outside a repo.
 
-    Used to server-render the titlebar chip; cheap enough to call per listing.
+    Used to server-render the context chip; cheap enough to call per listing.
     """
     return _head(root)[0]
 

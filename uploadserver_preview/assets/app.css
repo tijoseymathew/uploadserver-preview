@@ -30,9 +30,9 @@ a:hover { text-decoration: underline; }
 }
 
 /* ===========================================================================
-   App window chrome — shared by the explorer (listing) and the viewer.
-   Fills the viewport; a title bar carries the traffic-light glyphs, a label,
-   and a right-aligned context chip.
+   App frame — shared by the explorer (listing) and the viewer. Fills the
+   viewport. The context chip (git branch / "local") sits in the sidebar
+   footer on the shell and at the end of the viewer's topbar.
    =========================================================================== */
 .app {
   display: flex;
@@ -42,34 +42,7 @@ a:hover { text-decoration: underline; }
   background: var(--panel);
 }
 
-.titlebar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 40px;
-  padding: 0 14px;
-  background: var(--chrome);
-  border-bottom: 1px solid var(--border);
-}
-.titlebar .dots { display: flex; gap: 8px; flex: 0 0 auto; }
-.titlebar .dots i { width: 11px; height: 11px; border-radius: 50%; display: block; }
-.titlebar .dots i:nth-child(1) { background: #ff5f57; }
-.titlebar .dots i:nth-child(2) { background: #febc2e; }
-.titlebar .dots i:nth-child(3) { background: #28c840; }
-.titlebar .title {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.titlebar .chip {
-  margin-left: auto;
+.chip {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -77,8 +50,9 @@ a:hover { text-decoration: underline; }
   font-family: var(--mono);
   font-size: 11px;
   color: var(--muted);
+  white-space: nowrap;
 }
-.titlebar .chip .led { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.chip .led { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 
 /* segmented control (Rendered / Raw and similar) */
 .segmented {
@@ -460,7 +434,7 @@ a:hover { text-decoration: underline; }
 
 /* ---------------------------------------------------------------------------
    Mobile navigator (design reference 1a) — on narrow screens the sidebar
-   collapses into a swipe-up bottom sheet, driven by a titlebar hamburger and a
+   collapses into a swipe-up bottom sheet, driven by a topbar hamburger and a
    bottom-edge grip. The shell folds it away when a file opens and opens it by
    default when nothing is shown (see mobile.js + explorer.js). On desktop every
    sheet piece below is kept hidden.
@@ -570,7 +544,7 @@ a:hover { text-decoration: underline; }
    =========================================================================== */
 .topbar {
   position: sticky;
-  top: 40px;              /* sits under the title bar */
+  top: 0;
   z-index: 20;
   flex: 0 0 auto;
   display: flex;
@@ -1077,7 +1051,6 @@ andypf-json-viewer {
   .row { grid-template-columns: 1fr auto; }
   .row .raw-link { display: none; }
   .meta { display: none; }
-  .titlebar .title { display: none; }
   .content { padding: 20px 14px 80px; }
   .modal { max-height: 88vh; }
 }

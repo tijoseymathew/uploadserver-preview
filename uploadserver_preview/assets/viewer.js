@@ -395,8 +395,6 @@
 
     var name = baseName(decode(path));
     document.title = name + ' · preview';
-    var titlelabel = document.getElementById('titlelabel');
-    if (titlelabel) titlelabel.textContent = name;
 
     // ?raw keeps a top-level navigation on the raw bytes — without it the
     // server would answer a previewable file's URL with the explorer shell.
