@@ -207,15 +207,36 @@
     content.appendChild(wrap);
   }
 
+  // A transient toast anchored under the "Open ↗" button, plus a short pulse on
+  // the button itself — the unobtrusive replacement for the old sandbox banner.
+  function flashOpenHint() {
+    var openlink = document.getElementById('openlink');
+    if (!openlink || openlink.hidden) return;
+
+    var prev = document.querySelector('.open-toast');
+    if (prev) prev.remove();
+
+    openlink.classList.remove('pulse');
+    void openlink.offsetWidth;      // restart the animation on repeat loads
+    openlink.classList.add('pulse');
+
+    var toast = elem('div', 'open-toast', 'Scripts are blocked in this preview — open ↗ to run the page in a new tab.');
+    document.body.appendChild(toast);
+    var r = openlink.getBoundingClientRect();
+    toast.style.top = (r.bottom + 8) + 'px';
+    toast.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+    requestAnimationFrame(function () { toast.classList.add('show'); });
+    setTimeout(function () {
+      toast.classList.remove('show');
+      setTimeout(function () { if (toast.parentNode) toast.remove(); }, 260);
+    }, 4000);
+  }
+
   // Live HTML preview in a locked-down <iframe sandbox>. The empty sandbox token
   // blocks scripts, forms, popups and same-origin access, so the uploaded page
   // renders (markup + styles) but can neither run code nor touch this session.
   // "Open ↗" (see load) is the opt-in, un-sandboxed escape hatch in a new tab.
   function renderHtmlPreview(path, kind) {
-    content.appendChild(noticeEl(
-      'Live preview in a locked-down sandbox — scripts and forms are blocked. ' +
-      'Use “Open ↗” above to run the page in a new tab without the sandbox.'
-    ));
     var wrap = elem('div', 'htmlpreview');
     var frame = document.createElement('iframe');
     frame.className = 'htmlframe';
@@ -226,6 +247,7 @@
     frame.src = path;
     wrap.appendChild(frame);
     content.appendChild(wrap);
+    flashOpenHint();
   }
 
   function renderCode(text, lang, notice) {
