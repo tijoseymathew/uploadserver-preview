@@ -26,6 +26,8 @@ import urllib.parse
 
 import uploadserver
 
+from . import gitinfo
+
 __all__ = ["PreviewHTTPRequestHandler", "main", "serve"]
 
 
@@ -48,6 +50,8 @@ ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 ASSET_ROUTE = "/__preview_asset__/"
 VIEW_ROUTE = "/__view__"
 INDEX_ROUTE = "/__index__"
+GIT_ROUTE = "/__git__"
+DIFF_ROUTE = "/__diff__"
 
 # Files we are willing to serve from the assets directory (basename whitelist).
 _ASSET_FILES = frozenset(
@@ -107,6 +111,7 @@ _SCRIPTS = (
     "diff2html.core.min.js",
     "json-viewer.js",
     "viewer.js",
+    "git.js",
 )
 
 # Extensions that open in the rich viewer. Everything else in a listing is a
@@ -224,6 +229,28 @@ def _dir_index(handler, url_path):
     }
 
 
+def _git_root():
+    """The served directory (absolute) — where gitinfo runs its commands."""
+    return os.path.realpath(getattr(uploadserver.args, "directory", os.getcwd()))
+
+
+def _chip_html():
+    """The titlebar context chip: the git branch when serving a repo, else "local".
+
+    Server-rendered so it is right without JS; git.js refreshes the label (and
+    keeps it in sync with the compare picker) once /__git__ answers.
+    """
+    label = gitinfo.head_label(_git_root())
+    if label:
+        text = "&#9095; %s" % _html_escape(label)  # ⎇ branch
+    else:
+        text = "local"
+    return (
+        '<span class="chip"><span class="led" aria-hidden="true"></span>'
+        '<span id="git-chip">%s</span></span>' % text
+    )
+
+
 def _hljs_css_links(theme):
     """The highlight.js theme stylesheet link(s) for the given --theme."""
     if theme == "light":
@@ -277,7 +304,7 @@ def get_viewer_page(theme):
   <div class="titlebar">
     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
     <span class="title" id="titlelabel">preview</span>
-    <span class="chip"><span class="led" aria-hidden="true"></span>local</span>
+    %(chip)s
   </div>
   <header class="topbar">
     <a class="back" id="backlink" href="/" title="Back to folder" aria-label="Back to folder">&larr;</a>
@@ -288,6 +315,7 @@ def get_viewer_page(theme):
     <div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>
       <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
       <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
+      <button id="btn-diff" type="button" aria-pressed="false" hidden>Diff</button>
     </div>
     <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
     <a class="raw" id="rawlink" href="#">raw &#8599;</a>
@@ -301,6 +329,7 @@ def get_viewer_page(theme):
             "theme": theme,
             "color_scheme": color_scheme,
             "head_links": head_links,
+            "chip": _chip_html(),
             "scripts": scripts,
         }
     ).encode("utf-8")
@@ -408,7 +437,7 @@ def _render_shell(handler, fs_path, names):
     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle file navigator" aria-controls="nav-sheet" aria-expanded="false">&#9776;</button>
     <span class="title" id="titlelabel">%(folder)s &mdash; explorer</span>
-    <span class="chip"><span class="led" aria-hidden="true"></span>local</span>
+    %(chip)s
   </div>
   <div class="shell">
     <aside class="sidebar" id="nav-sheet">
@@ -416,6 +445,15 @@ def _render_shell(handler, fs_path, names):
       <div class="side-head">
         <span class="exp-label">Explorer</span>
         <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
+      </div>
+      <div class="gitbar" id="gitbar" hidden>
+        <span class="git-glyph" aria-hidden="true">&#9095;</span>
+        <span class="git-compare">Comparing
+          <select class="git-base" id="git-base" aria-label="Compare base"></select>
+          <span class="git-arrow" aria-hidden="true">&larr;</span>
+          <span class="git-branch" id="git-branch"></span>
+        </span>
+        <span class="git-counts" id="git-counts" title="Lines added / removed vs the compare base"></span>
       </div>
       <div class="tree" id="tree" data-cwd="%(cwd)s">
         <div class="tree-inner">
@@ -436,6 +474,7 @@ def _render_shell(handler, fs_path, names):
         <div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>
           <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
           <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
+          <button id="btn-diff" type="button" aria-pressed="false" hidden>Diff</button>
         </div>
         <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
         <a class="raw" id="rawlink" href="#" hidden>raw &#8599;</a>
@@ -479,6 +518,7 @@ def _render_shell(handler, fs_path, names):
         "title": esc(url_path),
         "head_links": _head_links(theme),
         "folder": esc(folder),
+        "chip": _chip_html(),
         "crumbs": crumbs,
         "cwd": esc(url_path),
         "rows": rows,
@@ -646,6 +686,12 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         if route == INDEX_ROUTE:
             self._serve_index()
             return True
+        if route == GIT_ROUTE:
+            self._serve_git()
+            return True
+        if route == DIFF_ROUTE:
+            self._serve_diff()
+            return True
         if route.startswith(ASSET_ROUTE):
             self._serve_asset(route[len(ASSET_ROUTE):])
             return True
@@ -691,6 +737,47 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
             return
         body = json.dumps(data).encode("utf-8")
         self._send_bytes(body, "application/json; charset=utf-8", cache=False, csp=True)
+
+    def _serve_git(self):
+        """Serve the git status JSON (branch, compare base, change map, counts).
+
+        `?base=<branch>` picks the compare base; gitinfo validates it against
+        the repo's real branch list. Outside a repo: {"enabled": false}.
+        """
+        query = urllib.parse.urlsplit(self.path).query
+        base = (urllib.parse.parse_qs(query).get("base") or [None])[0]
+        st = gitinfo.status(_git_root(), base)
+        data = {"enabled": False} if st is None else dict(st, enabled=True)
+        body = json.dumps(data).encode("utf-8")
+        self._send_bytes(body, "application/json; charset=utf-8", cache=False, csp=True)
+
+    def _serve_diff(self):
+        """Serve one file's unified diff vs the compare base as text/plain.
+
+        `?path=<url-path>&base=<branch>`. The path is resolved the same way as
+        file serving and must stay inside the served root.
+        """
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        raw = (query.get("path") or [""])[0]
+        base = (query.get("base") or [None])[0]
+        url_path = urllib.parse.unquote(raw)
+        if not url_path.startswith("/"):
+            url_path = "/" + url_path
+        root = _git_root()
+        # translate_path unquotes its argument; hand it a quoted path (see
+        # _dir_index). realpath containment defends against ../ and symlinks.
+        real = os.path.realpath(self.translate_path(urllib.parse.quote(url_path)))
+        if real != root and not real.startswith(root + os.sep):
+            self.send_error(http.HTTPStatus.BAD_REQUEST, "Invalid path")
+            return
+        relpath = os.path.relpath(real, root)
+        text = gitinfo.file_diff(root, relpath, base)
+        self._send_bytes(
+            text.encode("utf-8", "surrogateescape"),
+            "text/plain; charset=utf-8",
+            cache=False,
+            csp=True,
+        )
 
     def _serve_asset(self, name):
         safe = posixpath.basename(urllib.parse.unquote(name))
