@@ -347,6 +347,83 @@ a:hover { text-decoration: underline; }
   padding: 20px 2px;
 }
 
+/* git integration: the sidebar gitbar ("Comparing <base> ← <branch>" + counts),
+   per-file M/A/D badges in the tree, and folder change dots. Filled by git.js;
+   everything stays hidden outside a repo. */
+.gitbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.gitbar .git-glyph { flex: 0 0 auto; color: var(--accent-fg); }
+.gitbar .git-compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.gitbar .git-base {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  padding: 1px 4px;
+  max-width: 104px;
+  cursor: pointer;
+}
+.gitbar .git-base:hover { border-color: var(--accent); }
+.gitbar .git-branch {
+  color: var(--text-strong);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gitbar .git-counts {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.gitbar .gc-add { color: var(--add-fg); }
+.gitbar .gc-del { color: var(--del-fg); }
+
+/* per-file change badge in the tree (right-aligned, before the size) */
+.gbadge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+.gbadge + .tsize { margin-left: 0; }
+.gbadge-m { color: var(--mod-fg); background: var(--mod-bg); }
+.gbadge-a { color: var(--add-fg); background: var(--add-bg); }
+.gbadge-d { color: var(--del-fg); background: var(--del-bg); }
+
+/* folders containing changes get a subtle dot after the name */
+.trow.isdir.gchanged .tname::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--mod-fg);
+  vertical-align: middle;
+}
+
 /* ---------------------------------------------------------------------------
    Mobile navigator (design reference 1a) — on narrow screens the sidebar
    collapses into a swipe-up bottom sheet, driven by a titlebar hamburger and a

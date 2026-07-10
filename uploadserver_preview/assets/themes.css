@@ -47,6 +47,7 @@
   /* ---- diff / change ---- */
   --add-fg: #1a7f37;  --add-bg: #e6ffec;
   --del-fg: #cf222e;  --del-bg: #ffebe9;
+  --mod-fg: #9a6700;  --mod-bg: #fff8c5;
   --link:   #2f6feb;
   --danger: #cf222e;
 
@@ -99,6 +100,7 @@
 
   --add-fg: #3fb950;  --add-bg: rgba(63, 185, 80, .14);
   --del-fg: #f85149;  --del-bg: rgba(248, 81, 73, .14);
+  --mod-fg: #d29922;  --mod-bg: rgba(210, 153, 34, .14);
   --link:   #79c0ff;
   --danger: #f85149;
 
@@ -140,6 +142,7 @@
 
     --add-fg: #3fb950;  --add-bg: rgba(63, 185, 80, .14);
     --del-fg: #f85149;  --del-bg: rgba(248, 81, 73, .14);
+    --mod-fg: #d29922;  --mod-bg: rgba(210, 153, 34, .14);
     --link:   #79c0ff;
     --danger: #f85149;
 
