@@ -7,10 +7,15 @@ instead of downloaded: Markdown as prose, JSON as a collapsible tree, source
 code with syntax highlighting, CSV/TSV as tables, unified diffs GitHub-style,
 and images inline.
 
+![demo](docs/demo.gif)
+
+It shines on a **remote box you're SSH'd into**: start it there, forward the
+port, and read files in a real browser instead of paging through the terminal.
+
 Everything renders **client-side with vendored JavaScript** — no build step, no
-CDN, no outbound network. It works on an air-gapped LAN, which is where a file
-server like this usually lives. Uploads and every other `uploadserver` feature
-(basic auth, TLS/mTLS, `--directory`, `--theme`, …) are untouched.
+CDN, no outbound network. It also works on an air-gapped LAN, which is where a
+file server like this usually lives. Uploads and every other `uploadserver`
+feature (basic auth, TLS/mTLS, `--directory`, `--theme`, …) are untouched.
 
 ## Install
 
