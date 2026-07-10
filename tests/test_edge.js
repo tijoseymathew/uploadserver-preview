@@ -4,7 +4,7 @@ const LIBS=['hljs.min.js','hljs-dockerfile.min.js','marked.umd.js','purify.min.j
 const SHELL='<!DOCTYPE html><html data-theme="dark"><head></head><body><header><a id="backlink"></a><nav id="crumbs"></nav><span id="kind"></span><span id="meta"></span><a id="rawlink"></a></header><main id="content"><div class="loading">Loading</div></main></body></html>';
 const CASES=[
  {file:'bad.json', check:h=>/codewrap/.test(h)&&/Not valid JSON/.test(h), label:'invalid JSON -> source + notice'},
- {file:'page.html', check:h=>/never executed/.test(h)&&/codewrap/.test(h)&&!/<h1>hi<\/h1>/.test(h.replace(/<span[^>]*>|<\/span>/g,'')), label:'html shown as source, not executed'},
+ {file:'page.html', check:h=>/class="htmlframe"/.test(h)&&/sandbox=""/.test(h)&&/src="\/page\.html"/.test(h)&&!/<h1>hi<\/h1>/.test(h), label:'html live preview in a sandboxed iframe'},
  {file:'blob.bin', check:h=>/Binary file/.test(h), label:'binary detected'},
  {file:'config.json', check:h=>/andypf-json-viewer/.test(h), label:'valid JSON uses web component'},
 ];
