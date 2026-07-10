@@ -54,6 +54,10 @@ a:hover { text-decoration: underline; }
 }
 .chip .led { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 
+/* inline SVG icons (stroke = currentColor) used by the topbar controls */
+.ico { width: 14px; height: 14px; flex: 0 0 auto; display: inline-block; }
+.seg-ico { display: none; }  /* view-toggle icons only appear on narrow screens */
+
 /* segmented control (Rendered / Raw and similar) */
 .segmented {
   display: inline-flex;
@@ -67,6 +71,9 @@ a:hover { text-decoration: underline; }
   appearance: none;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--ui);
   font-size: 12px;
   font-weight: 600;
@@ -251,15 +258,14 @@ a:hover { text-decoration: underline; }
 .btn-sm { font-size: 11.5px; padding: 4px 9px; }
 
 /* hidden & git-ignored files: rows carry is-hidden (server-marked); the tree's
-   hide-hidden class (the default) suppresses them, and the ".*" side-head
-   button toggles it. Revealed hidden rows render dimmed. */
+   hide-hidden class (the default) suppresses them, and the side-head eye
+   button toggles it — closed eye = concealed, open eye = revealed (dimmed). */
 .hid-toggle {
   appearance: none;
   flex: 0 0 auto;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  line-height: 1.4;
-  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 7px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--panel-2);
@@ -267,6 +273,9 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
 }
 .hid-toggle:hover { color: var(--text); border-color: var(--accent); }
+.hid-toggle .eye-open { display: none; }
+.hid-toggle[aria-pressed="true"] .eye-open { display: inline-block; }
+.hid-toggle[aria-pressed="true"] .eye-closed { display: none; }
 .hid-toggle[aria-pressed="true"] {
   color: var(--accent-contrast);
   background: var(--accent);
@@ -593,6 +602,9 @@ a:hover { text-decoration: underline; }
 }
 .raw {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--mono);
   font-size: 12px;
   padding: 4px 9px;
@@ -601,6 +613,15 @@ a:hover { text-decoration: underline; }
   color: var(--text);
 }
 .raw:hover { text-decoration: none; border-color: var(--accent); background: var(--panel-2); }
+
+/* compact topbar on narrow screens: tighter spacing, icon-only controls */
+@media (max-width: 760px) {
+  .topbar { gap: 8px; padding: 4px 10px; min-height: 40px; }
+  .seg-ico { display: inline-block; }
+  .segmented .seg-lbl, .raw .lbl { display: none; }
+  .segmented button { padding: 4px 8px; }
+  .raw { padding: 4px 7px; }
+}
 
 /* ---------- content shell ---------- */
 .content {
@@ -1051,6 +1072,7 @@ andypf-json-viewer {
   .row { grid-template-columns: 1fr auto; }
   .row .raw-link { display: none; }
   .meta { display: none; }
+  .badge { display: none; }
   .content { padding: 20px 14px 80px; }
   .modal { max-height: 88vh; }
 }

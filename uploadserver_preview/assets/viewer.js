@@ -91,18 +91,30 @@
   }
 
   // ---------- header / breadcrumb ----------
+  // Deep paths collapse: everything above the direct parent folds into one
+  // "../.." link (to the grandparent, full path in the tooltip), so the bar
+  // stays short at any depth. Mirrors _breadcrumbs_html() server-side.
   function buildCrumbs(urlPath) {
     var crumbs = document.getElementById('crumbs');
     crumbs.innerHTML = '';
-    var home = elem('a', null, '~'); home.href = '/'; home.title = 'server root';
-    crumbs.appendChild(home);
-    var decoded = decode(urlPath).replace(/^\/+/, '');
-    var parts = decoded.split('/').filter(Boolean);
+    var parts = decode(urlPath).replace(/^\/+/, '').split('/').filter(Boolean);
     var acc = '';
-    parts.forEach(function (seg, idx) {
+    var shown = parts;
+    if (parts.length > 2) {
+      var above = parts.slice(0, parts.length - 2);
+      acc = '/' + above.map(encodeURIComponent).join('/');
+      var up = elem('a', 'up', '../..');
+      up.href = acc + '/'; up.title = above.join('/') + '/';
+      crumbs.appendChild(up);
+      shown = parts.slice(-2);
+    } else {
+      var home = elem('a', null, '~'); home.href = '/'; home.title = 'server root';
+      crumbs.appendChild(home);
+    }
+    shown.forEach(function (seg, idx) {
       crumbs.appendChild(elem('span', 'sep', '/'));
       acc += '/' + encodeURIComponent(seg);
-      if (idx < parts.length - 1) {
+      if (idx < shown.length - 1) {
         var a = elem('a', null, seg); a.href = acc + '/';
         crumbs.appendChild(a);
       } else {

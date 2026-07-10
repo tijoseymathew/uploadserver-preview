@@ -269,6 +269,67 @@ def _chip_html(fs_dir):
     )
 
 
+# Inline SVG icons (stroke = currentColor, so they follow the text colour).
+# Used by the topbar controls and the sidebar's hidden-files eye toggle.
+_ICON_PATHS = {
+    "eye": '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>'
+           '<circle cx="12" cy="12" r="3"/>',
+    "eye-off": '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>'
+               '<circle cx="12" cy="12" r="3"/><line x1="4" y1="21" x2="20" y2="3"/>',
+    "doc": '<rect x="5" y="3" width="14" height="18" rx="2"/>'
+           '<line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/>'
+           '<line x1="9" y1="16" x2="13" y2="16"/>',
+    "code": '<polyline points="8 6 3 12 8 18"/><polyline points="16 6 21 12 16 18"/>',
+    "diff": '<line x1="5" y1="7" x2="11" y2="7"/><line x1="8" y1="4" x2="8" y2="10"/>'
+            '<line x1="13" y1="17" x2="19" y2="17"/>',
+    "download": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+                '<polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    "external": '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
+                '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
+}
+
+
+def _icon(name, cls="ico"):
+    return (
+        '<svg class="%s" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+        'aria-hidden="true">%s</svg>' % (cls, _ICON_PATHS[name])
+    )
+
+
+def _pane_controls_html(raw_hidden=False):
+    """The topbar controls shared by the explorer shell and the standalone
+    viewer: kind badge, meta line, the Rendered/Raw/Diff toggle, and the
+    open/download links. Toggle buttons and links carry an icon plus a text
+    label; narrow screens keep only the icon (see app.css).
+    """
+    return (
+        '<span class="badge" id="kind"></span>\n'
+        '<span class="meta" id="meta"></span>\n'
+        '<div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>\n'
+        '<button id="btn-rendered" type="button" aria-pressed="true" title="Rendered">'
+        '%(i_doc)s<span class="seg-lbl">Rendered</span></button>\n'
+        '<button id="btn-raw" type="button" aria-pressed="false" title="Raw">'
+        '%(i_code)s<span class="seg-lbl">Raw</span></button>\n'
+        '<button id="btn-diff" type="button" aria-pressed="false" title="Diff" hidden>'
+        '%(i_diff)s<span class="seg-lbl">Diff</span></button>\n'
+        '</div>\n'
+        '<a class="raw" id="openlink" href="#" hidden '
+        'title="Open the live page in a new tab (runs scripts, no sandbox)">'
+        '%(i_ext)s<span class="lbl">open</span></a>\n'
+        '<a class="raw" id="rawlink" href="#"%(hid)s download title="Download the raw file">'
+        '%(i_dl)s<span class="lbl">download</span></a>'
+        % {
+            "i_doc": _icon("doc", "ico seg-ico"),
+            "i_code": _icon("code", "ico seg-ico"),
+            "i_diff": _icon("diff", "ico seg-ico"),
+            "i_ext": _icon("external"),
+            "i_dl": _icon("download"),
+            "hid": " hidden" if raw_hidden else "",
+        }
+    )
+
+
 def _hljs_css_links(theme):
     """The highlight.js theme stylesheet link(s) for the given --theme."""
     if theme == "light":
@@ -327,15 +388,7 @@ def get_viewer_page(theme, git_dir=None):
     <a class="back" id="backlink" href="/" title="Back to folder" aria-label="Back to folder">&larr;</a>
     <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
     <span class="spacer"></span>
-    <span class="badge" id="kind"></span>
-    <span class="meta" id="meta"></span>
-    <div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>
-      <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
-      <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
-      <button id="btn-diff" type="button" aria-pressed="false" hidden>Diff</button>
-    </div>
-    <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
-    <a class="raw" id="rawlink" href="#">raw &#8599;</a>
+    %(controls)s
     %(chip)s
   </header>
   <main id="content" class="content"><div class="loading">Loading&hellip;</div></main>
@@ -347,6 +400,7 @@ def get_viewer_page(theme, git_dir=None):
             "theme": theme,
             "color_scheme": color_scheme,
             "head_links": head_links,
+            "controls": _pane_controls_html(),
             "chip": _chip_html(git_dir or _git_root()),
             "scripts": scripts,
         }
@@ -397,19 +451,30 @@ def _tree_row_html(url_path, name, is_dir, full, hidden, depth):
 
 
 def _breadcrumbs_html(url_path):
-    """Breadcrumb trail for the directory at `url_path` (unquoted, ends in '/')."""
+    """Breadcrumb trail for the directory at `url_path` (unquoted, ends in '/').
+
+    Deep paths collapse: everything above the direct parent folds into one
+    "../.." link (to the grandparent, full path in the tooltip), so the bar
+    stays short at any depth. Mirrors buildCrumbs() in viewer.js.
+    """
     esc = _html_escape
-    parts = ['<a href="/">~</a>']
+    segs = [s for s in url_path.strip("/").split("/") if s]
     acc = ""
-    for i, seg in enumerate(s for s in url_path.strip("/").split("/") if s):
+    if len(segs) > 2:
+        above = segs[:-2]
+        acc = "/" + "/".join(urllib.parse.quote(s) for s in above)
+        parts = ['<a class="up" href="%s/" title="%s/">../..</a>' % (acc, esc("/".join(above)))]
+        shown = segs[-2:]
+    else:
+        parts = ['<a href="/" title="server root">~</a>']
+        shown = segs
+    for seg in shown:
         acc += "/" + urllib.parse.quote(seg)
         parts.append('<span class="sep">/</span>')
         parts.append('<a href="%s/">%s</a>' % (acc, esc(seg)))
     # mark the last crumb as current
-    if len(parts) > 1:
-        segs = [s for s in url_path.strip("/").split("/") if s]
-        last = esc(segs[-1])
-        parts[-1] = '<span class="here">%s</span>' % last
+    if shown:
+        parts[-1] = '<span class="here">%s</span>' % esc(shown[-1])
     return "".join(parts)
 
 
@@ -461,7 +526,7 @@ def _render_shell(handler, fs_path, names, url_path=None):
       <div class="side-head">
         <span class="exp-label">Explorer</span>
         <button class="hid-toggle" id="hid-toggle" type="button" aria-pressed="false"
-                title="Show hidden &amp; git-ignored files">.*</button>
+                title="Show hidden &amp; git-ignored files">%(eye)s%(eye_off)s</button>
         <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
       </div>
       <div class="tree hide-hidden" id="tree" data-cwd="%(cwd)s">
@@ -489,15 +554,7 @@ def _render_shell(handler, fs_path, names, url_path=None):
           <span class="git-counts" id="git-counts" title="Lines added / removed vs the compare base"></span>
         </div>
         <span class="spacer"></span>
-        <span class="badge" id="kind"></span>
-        <span class="meta" id="meta"></span>
-        <div class="segmented" id="viewtoggle" role="group" aria-label="View mode" hidden>
-          <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
-          <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
-          <button id="btn-diff" type="button" aria-pressed="false" hidden>Diff</button>
-        </div>
-        <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
-        <a class="raw" id="rawlink" href="#" hidden>raw &#8599;</a>
+        %(controls)s
       </header>
       <main id="content" class="content"><div class="empty-pane">Select a file to preview.</div></main>
     </section>
@@ -537,6 +594,9 @@ def _render_shell(handler, fs_path, names, url_path=None):
         "color_scheme": uploadserver.COLOR_SCHEME.get(theme, "light dark"),
         "title": esc(url_path),
         "head_links": _head_links(theme),
+        "controls": _pane_controls_html(raw_hidden=True),
+        "eye": _icon("eye", "ico eye-open"),
+        "eye_off": _icon("eye-off", "ico eye-closed"),
         "chip": _chip_html(fs_path),
         "crumbs": crumbs,
         "cwd": esc(url_path),
