@@ -20,6 +20,7 @@ import io
 import json
 import mimetypes
 import os
+import pathlib
 import posixpath
 import urllib.parse
 
@@ -373,7 +374,7 @@ def _render_shell(handler, fs_path, names):
     n = len(entries)
     footer = "%d item%s" % (n, "" if n == 1 else "s")
 
-    scripts = _script_tags(_SCRIPTS + ("explorer.js",))
+    scripts = _script_tags(_SCRIPTS + ("explorer.js", "upload.js"))
 
     return """<!DOCTYPE html>
 <html lang="en" data-theme="%(theme)s">
@@ -395,14 +396,14 @@ def _render_shell(handler, fs_path, names):
     <aside class="sidebar">
       <div class="side-head">
         <span class="exp-label">Explorer</span>
-        <a class="btn btn-accent btn-sm" href="/upload">&#8593; Upload</a>
+        <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
       </div>
-      <div class="tree" id="tree">
+      <div class="tree" id="tree" data-cwd="%(cwd)s">
         <div class="tree-inner">
 %(rows)s
         </div>
       </div>
-      <div class="exp-foot">%(footer)s</div>
+      <div class="exp-foot" id="exp-foot">%(footer)s</div>
     </aside>
     <section class="pane">
       <header class="topbar">
@@ -419,6 +420,31 @@ def _render_shell(handler, fs_path, names):
       <main id="content" class="content"><div class="empty-pane">Select a file to preview.</div></main>
     </section>
   </div>
+  <div class="drop-overlay" id="drop-overlay" hidden aria-hidden="true">
+    <div class="drop-overlay-inner"><span class="do-glyph" aria-hidden="true">&#8593;</span>Drop files to upload</div>
+  </div>
+  <div class="modal-backdrop" id="upload-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="upload-title">
+      <div class="modal-head">
+        <h2 class="modal-title" id="upload-title">Upload files</h2>
+        <button class="modal-close" id="upload-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="modal-dest">Uploading to <span class="dest-path" id="upload-dest">~</span></p>
+      <div class="dropzone" id="upload-drop">
+        <span class="dz-glyph" aria-hidden="true">&#8593;</span>
+        <p class="dz-text">Drag &amp; drop files here</p>
+        <p class="dz-sub">or <button type="button" class="linkbtn" id="upload-browse">browse&hellip;</button></p>
+      </div>
+      <ul class="filelist" id="upload-filelist"></ul>
+      <div class="modal-foot">
+        <span class="upload-status" id="upload-status" role="status" aria-live="polite"></span>
+        <span class="spacer"></span>
+        <button class="btn" id="upload-cancel" type="button">Cancel</button>
+        <button class="btn btn-accent" id="upload-confirm" type="button" disabled>Upload</button>
+      </div>
+      <input type="file" id="upload-input" multiple hidden>
+    </div>
+  </div>
 </div>
 %(scripts)s
 </body>
@@ -429,6 +455,7 @@ def _render_shell(handler, fs_path, names):
         "head_links": _head_links(theme),
         "folder": esc(folder),
         "crumbs": crumbs,
+        "cwd": esc(url_path),
         "rows": rows,
         "footer": footer,
         "scripts": scripts,
@@ -457,6 +484,82 @@ def _html_escape(s):
     )
 
 
+def _resolve_upload_dir(handler, dir_param):
+    """Resolve the upload destination for `?dir=<url-path>` to a filesystem path.
+
+    The stock uploadserver drops every file into the served root; this lets the
+    explorer upload into the folder the user last interacted with. `dir_param`
+    is a URL path (e.g. "/sub/dir/"); we translate it and confirm it stays
+    inside the served root (defends against symlink/`..` escapes) and is an
+    existing directory. Returns the absolute fs path, or None if invalid.
+    """
+    root = os.path.realpath(getattr(uploadserver.args, "directory", os.getcwd()))
+    url_path = urllib.parse.unquote(dir_param or "/")
+    if not url_path.startswith("/"):
+        url_path = "/" + url_path
+    # translate_path unquotes its argument and already collapses '..'; hand it a
+    # quoted path so names containing '%' survive.
+    fs_path = handler.translate_path(urllib.parse.quote(url_path))
+    real = os.path.realpath(fs_path)
+    if real != root and not real.startswith(root + os.sep):
+        return None
+    if not os.path.isdir(real):
+        return None
+    return real
+
+
+def _receive_upload(handler, dest_dir):
+    """Receive a multipart upload into `dest_dir` (an already-validated fs path).
+
+    Mirrors uploadserver.receive_upload but writes into an arbitrary directory
+    rather than the fixed served root. Reuses uploadserver's PersistentFieldStorage
+    (which streams large parts to temp files) and auto_rename/--allow-replace
+    conflict handling. Returns an (HTTPStatus, message) tuple.
+    """
+    result = (http.HTTPStatus.INTERNAL_SERVER_ERROR, "Server error")
+    name_conflict = False
+
+    form = uploadserver.PersistentFieldStorage(
+        fp=handler.rfile, headers=handler.headers, environ={"REQUEST_METHOD": "POST"}
+    )
+    if "files" not in form:
+        return (http.HTTPStatus.BAD_REQUEST, 'Field "files" not found')
+
+    fields = form["files"]
+    if not isinstance(fields, list):
+        fields = [fields]
+    if not all(field.file and field.filename for field in fields):
+        return (http.HTTPStatus.BAD_REQUEST, "No files selected")
+
+    allow_replace = getattr(uploadserver.args, "allow_replace", False)
+    for field in fields:
+        filename = pathlib.Path(field.filename).name if (field.file and field.filename) else None
+        if not filename:
+            continue
+        destination = pathlib.Path(dest_dir) / filename
+        if os.path.exists(destination):
+            if allow_replace and os.path.isfile(destination):
+                os.remove(destination)
+            else:
+                destination = uploadserver.auto_rename(destination)
+                name_conflict = True
+        # Large parts are spilled to a NamedTemporaryFile we can rename into
+        # place; small ones stay in an in-memory buffer we copy out.
+        if hasattr(field.file, "name"):
+            source = field.file.name
+            field.file.close()
+            os.rename(source, destination)
+        else:
+            with open(destination, "wb") as f:
+                f.write(field.file.read())
+        handler.log_message('[Uploaded] "%s" --> %s', filename, destination)
+        result = (
+            http.HTTPStatus.NO_CONTENT,
+            "Some filename(s) changed due to name conflict" if name_conflict else "Files accepted",
+        )
+    return result
+
+
 class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
     """uploadserver's handler plus preview routes and a richer directory listing."""
 
@@ -478,6 +581,30 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         if self._route_preview():  # our senders omit the body for HEAD
             return
         super().do_HEAD()
+
+    def do_POST(self):
+        # /upload accepts an optional ?dir=<url-path> so the explorer can drop
+        # files into the folder the user is looking at, not just the served root.
+        if not uploadserver.check_http_authentication(self):
+            return
+        parsed = urllib.parse.urlsplit(self.path)
+        if parsed.path == "/upload":
+            dir_param = (urllib.parse.parse_qs(parsed.query).get("dir") or [None])[0]
+            dest = _resolve_upload_dir(self, dir_param)
+            if dest is None:
+                self.send_error(http.HTTPStatus.BAD_REQUEST, "Invalid upload directory")
+                return
+            status, message = _receive_upload(self, dest)
+            if status < http.HTTPStatus.BAD_REQUEST:
+                self.send_response(status, message)
+                self.end_headers()
+            else:
+                self.send_error(status, message)
+            return
+        super().do_POST()
+
+    def do_PUT(self):
+        self.do_POST()
 
     def _route_preview(self):
         """Handle preview-specific routes. Returns True if the request was served."""
