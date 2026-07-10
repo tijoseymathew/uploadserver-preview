@@ -289,6 +289,7 @@ def get_viewer_page(theme):
       <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
       <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
     </div>
+    <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
     <a class="raw" id="rawlink" href="#">raw &#8599;</a>
   </header>
   <main id="content" class="content"><div class="loading">Loading&hellip;</div></main>
@@ -436,6 +437,7 @@ def _render_shell(handler, fs_path, names):
           <button id="btn-rendered" type="button" aria-pressed="true">Rendered</button>
           <button id="btn-raw" type="button" aria-pressed="false">Raw</button>
         </div>
+        <a class="raw" id="openlink" href="#" hidden title="Open the live page in a new tab (runs scripts, no sandbox)">open &#8599;</a>
         <a class="raw" id="rawlink" href="#" hidden>raw &#8599;</a>
       </header>
       <main id="content" class="content"><div class="empty-pane">Select a file to preview.</div></main>

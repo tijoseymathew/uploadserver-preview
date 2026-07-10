@@ -16,6 +16,7 @@
 
   var content = document.getElementById('content');
   var rawlink = document.getElementById('rawlink');
+  var openlink = document.getElementById('openlink');
   var kindEl = document.getElementById('kind');
   var metaEl = document.getElementById('meta');
   var toggle = document.getElementById('viewtoggle');
@@ -186,6 +187,7 @@
   function showPlaceholder() {
     if (content) content.innerHTML = placeholder;
     if (rawlink) rawlink.hidden = true;
+    if (openlink) openlink.hidden = true;
     if (kindEl) kindEl.textContent = '';
     if (metaEl) metaEl.textContent = '';
     if (toggle) toggle.hidden = true;
