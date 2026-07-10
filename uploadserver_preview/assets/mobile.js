@@ -138,9 +138,11 @@
     isMobile: isMobile
   };
 
-  // Initial state: with no file in the pane, show the navigator; deep-linking to
-  // a file (?view=) leaves it folded so the content is what you land on.
-  var hasView = new URLSearchParams(location.search).get('view');
+  // Initial state: with no file in the pane, show the navigator; deep-linking
+  // to a file (a URL path not ending in "/", or a legacy ?view=) leaves it
+  // folded so the content is what you land on.
+  var hasView = new URLSearchParams(location.search).get('view') ||
+                location.pathname.slice(-1) !== '/';
   if (isMobile() && !hasView) setOpen(true);
   else apply();
 })();

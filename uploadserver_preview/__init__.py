@@ -211,10 +211,9 @@ def _entry_json(url_path, name, is_dir, full, hidden):
             d["size_h"] = ""
         abs_url = url_path + quoted
         d["raw"] = abs_url
-        if _is_previewable(name):
-            d["view"] = VIEW_ROUTE + "?path=" + urllib.parse.quote(abs_url, safe="")
-        else:
-            d["view"] = None
+        # Previewable files navigate to their own URL path (the server answers a
+        # browser navigation there with the explorer shell — see _serve_file_shell).
+        d["view"] = abs_url if _is_previewable(name) else None
     return d
 
 
@@ -386,9 +385,8 @@ def _tree_row_html(url_path, name, is_dir, full, hidden, depth):
         size_h = ""
     abs_url = url_path + quoted
     if _is_previewable(name):
-        view = VIEW_ROUTE + "?path=" + urllib.parse.quote(abs_url, safe="")
         anchor = '<a class="tname" href="%s" data-view="%s">%s</a>' % (
-            esc(view), esc(view), esc(name)
+            esc(abs_url), esc(abs_url), esc(name)
         )
     else:
         anchor = '<a class="tname" href="%s" download>%s</a>' % (esc(quoted), esc(name))
@@ -419,15 +417,18 @@ def _breadcrumbs_html(url_path):
     return "".join(parts)
 
 
-def _render_shell(handler, fs_path, names):
+def _render_shell(handler, fs_path, names, url_path=None):
     """The unified explorer shell: a persistent file-tree beside a content pane.
 
     The tree for the current directory is rendered server-side (so it works
     without JS); explorer.js then takes over — expanding folders and loading
-    files into the pane via fetch(), without a full navigation.
+    files into the pane via fetch(), without a full navigation. `url_path`
+    (unquoted) overrides the directory the shell is for — used when a file URL
+    gets the shell of its parent directory (see _serve_file_shell).
     """
     theme = getattr(uploadserver.args, "theme", "auto")
-    url_path = urllib.parse.unquote(handler.path.split("?", 1)[0])
+    if url_path is None:
+        url_path = urllib.parse.unquote(handler.path.split("?", 1)[0])
     if not url_path.endswith("/"):
         url_path += "/"
 
@@ -666,6 +667,8 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
             return
         if self._route_preview():
             return
+        if self._serve_file_shell():
+            return
         # /upload, raw files, redirects, and directory listings fall through to
         # uploadserver (which re-checks auth, harmlessly).
         super().do_GET()
@@ -754,6 +757,41 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         return io.BytesIO(body)
 
     # ---------- helpers ----------
+    def _serve_file_shell(self):
+        """Serve the explorer shell for a browser navigating straight to a
+        previewable file — the address bar keeps the plain uploadserver path
+        (no ?view=) and explorer.js loads the file into the pane.
+
+        Only top-level navigations opt in (Sec-Fetch-Dest: document); fetch(),
+        curl/wget, iframes and images — and anything with ?raw — still get the
+        raw bytes, so downloads and mirroring behave like stock uploadserver.
+        Returns True if the shell was served.
+        """
+        parsed = urllib.parse.urlsplit(self.path)
+        if self.headers.get("Sec-Fetch-Dest") != "document":
+            return False
+        if "raw" in urllib.parse.parse_qs(parsed.query, keep_blank_values=True):
+            return False
+        url_path = urllib.parse.unquote(parsed.path)
+        if url_path.endswith("/") or not _is_previewable(posixpath.basename(url_path)):
+            return False
+        fs_path = self.translate_path(parsed.path)
+        if not os.path.isfile(fs_path):
+            return False
+        dir_url = url_path.rsplit("/", 1)[0] + "/"
+        try:
+            names = os.listdir(os.path.dirname(fs_path))
+            body = _render_shell(self, os.path.dirname(fs_path), names, url_path=dir_url)
+        except OSError:
+            return False
+        self._send_bytes(
+            body.encode("utf-8", "surrogateescape"),
+            "text/html; charset=utf-8",
+            cache=False,
+            csp=True,
+        )
+        return True
+
     def _serve_index(self):
         """Serve a directory's listing as JSON (drives the explorer tree)."""
         query = urllib.parse.urlsplit(self.path).query

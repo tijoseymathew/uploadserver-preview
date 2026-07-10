@@ -2,14 +2,14 @@
    Turns the server-rendered directory listing into a small SPA: expand/collapse
    folders in the tree (lazily fetching /__index__ JSON) and load files into the
    content pane in place via window.PreviewViewer.load() — no full navigation.
-   Also tracks the last-interacted directory and exposes window.PreviewExplorer
-   (getLastDir / refreshDir) for the upload modal.
+   URLs follow uploadserver's own paths: opening a file pushes its real URL
+   path (the server answers a navigation there with this same shell), no
+   ?view= query. Also tracks the last-interacted directory and exposes
+   window.PreviewExplorer (getLastDir / refreshDir) for the upload modal.
    Progressive enhancement: without this script the tree and file links still
    work as plain server-rendered links. */
 (function () {
   'use strict';
-
-  var VIEW_ROUTE = '/__view__';
 
   var tree = document.getElementById('tree');
   if (!tree) return; // nothing to enhance
@@ -41,6 +41,8 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  function decode(p) { try { return decodeURIComponent(p); } catch (e) { return p; } }
 
   // Build a tree row from an /__index__ entry. Mirrors _tree_row_html() server-side.
   function rowHtml(e, depth) {
@@ -154,10 +156,16 @@
   }
 
   // ---------- file selection ----------
-  function pathFromView(view) {
-    var q = view.indexOf('?');
-    var params = new URLSearchParams(q >= 0 ? view.slice(q + 1) : '');
-    return params.get('path');
+  // The tree anchor for a file path (data-view is the encoded URL path); also
+  // matches decoded forms so legacy ?view= deep-links still find their row.
+  function findFileAnchor(path) {
+    var dec = decode(path);
+    var anchors = tree.querySelectorAll('a.tname[data-view]');
+    for (var i = 0; i < anchors.length; i++) {
+      var v = anchors[i].getAttribute('data-view');
+      if (v === path || decode(v) === dec) return anchors[i];
+    }
+    return null;
   }
 
   // The directory containing a file row: for depth-0 files that's the cwd; for
@@ -182,8 +190,8 @@
     }
   }
 
-  function loadView(view, anchor, push) {
-    var filePath = pathFromView(view);
+  // `filePath` is the file's URL path (encoded, as carried in data-view).
+  function loadView(filePath, anchor, push) {
     if (!filePath) return;
     if (window.PreviewViewer) window.PreviewViewer.load(filePath);
     if (anchor) setLastDir(parentDirOf(anchor));
@@ -192,7 +200,7 @@
     // on mobile, fold the navigator sheet so the file is what you land on
     if (window.PreviewNav) window.PreviewNav.close();
     if (push) {
-      history.pushState({ view: filePath }, '', location.pathname + '?view=' + encodeURIComponent(filePath));
+      history.pushState({ view: filePath }, '', filePath);
     }
   }
 
@@ -221,14 +229,18 @@
     // non-previewable file links fall through to their normal download behaviour
   });
 
+  // The file shown at a given history entry is the URL path itself (a path not
+  // ending in "/"); legacy ?view= deep-links keep working.
+  function fileFromLocation() {
+    var legacy = new URLSearchParams(location.search).get('view');
+    if (legacy) return legacy;
+    return location.pathname.slice(-1) === '/' ? null : location.pathname;
+  }
+
   window.addEventListener('popstate', function () {
-    var v = new URLSearchParams(location.search).get('view');
-    if (v) {
-      var anchor = tree.querySelector('a.tname[data-view*="' + encodeURIComponent(v) + '"]');
-      loadView(VIEW_ROUTE + '?path=' + encodeURIComponent(v), anchor, false);
-    } else {
-      showPlaceholder();
-    }
+    var p = fileFromLocation();
+    if (p) loadView(p, findFileAnchor(p), false);
+    else showPlaceholder();
   });
 
   // ---------- hidden & git-ignored files ----------
@@ -259,10 +271,10 @@
     refreshDir: refreshDir
   };
 
-  // Deep-link: if the shell was opened with ?view=<path>, load that file.
-  var initial = new URLSearchParams(location.search).get('view');
+  // Deep-link: the shell may have been served for a file URL (or a legacy
+  // ?view= link) — load that file into the pane.
+  var initial = fileFromLocation();
   if (initial && window.PreviewViewer) {
-    var a0 = tree.querySelector('a.tname[data-view*="' + encodeURIComponent(initial) + '"]');
-    loadView(VIEW_ROUTE + '?path=' + encodeURIComponent(initial), a0, false);
+    loadView(initial, findFileAnchor(initial), false);
   }
 })();

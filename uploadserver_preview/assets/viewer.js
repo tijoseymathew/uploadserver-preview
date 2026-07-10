@@ -398,8 +398,11 @@
     var titlelabel = document.getElementById('titlelabel');
     if (titlelabel) titlelabel.textContent = name;
 
+    // ?raw keeps a top-level navigation on the raw bytes — without it the
+    // server would answer a previewable file's URL with the explorer shell.
+    var rawHref = path + (path.indexOf('?') < 0 ? '?raw' : '&raw');
     var raw = document.getElementById('rawlink');
-    if (raw) { raw.href = path; raw.target = '_blank'; raw.rel = 'noopener noreferrer'; }
+    if (raw) { raw.href = rawHref; raw.target = '_blank'; raw.rel = 'noopener noreferrer'; }
     var back = document.getElementById('backlink');
     if (back) { var dir = decode(path).replace(/[^\/]*$/, ''); back.href = dir || '/'; }
     buildCrumbs(path);
@@ -426,7 +429,7 @@
     var openlink = document.getElementById('openlink');
     if (openlink) {
       if (kind.type === 'html-source') {
-        openlink.href = path; openlink.target = '_blank';
+        openlink.href = rawHref; openlink.target = '_blank';
         openlink.rel = 'noopener noreferrer'; openlink.hidden = false;
       } else {
         openlink.hidden = true; openlink.removeAttribute('href');

@@ -73,9 +73,13 @@ keep the browser responsive; the raw link always serves the full file.
 swaps it in before serving, so uploads and auth keep working while a few extra
 routes are added:
 
-- `GET /__view__?path=…` returns a small static shell. The shell reads `path`
-  from the query string on the client, fetches the file same-origin, dispatches
-  on extension, and renders it. The server never reflects `path` into HTML.
+- A browser navigating to a previewable file's own URL (detected via
+  `Sec-Fetch-Dest: document`) gets the explorer shell instead of raw bytes; the
+  client then fetches the file same-origin, dispatches on extension, and renders
+  it. `curl`/`wget`, `fetch()`, iframes — and anything with `?raw` — keep
+  getting the raw file, so scripted downloads behave like stock `uploadserver`.
+- `GET /__view__?path=…` returns a small static viewer shell (kept for old
+  links). The server never reflects `path` into HTML.
 - `GET /__preview_asset__/<name>` serves the vendored JS/CSS by basename from a
   fixed whitelist (traversal-proof).
 - Directory listings are replaced with a richer, themed listing that adds view
