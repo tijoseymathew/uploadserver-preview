@@ -365,8 +365,8 @@ a:hover { text-decoration: underline; }
   color: var(--muted);
   white-space: nowrap;
 }
-/* the topbar gets crowded on small screens — the tree badges still tell the story */
-@media (max-width: 900px) { .gitbar { display: none; } }
+/* compact on small screens: drop the "Comparing" label, keep base ← branch */
+@media (max-width: 900px) { .gitbar .git-label { display: none; } }
 .gitbar .git-glyph { flex: 0 0 auto; color: var(--accent-fg); }
 .gitbar .git-compare {
   display: inline-flex;

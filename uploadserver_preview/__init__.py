@@ -479,7 +479,7 @@ def _render_shell(handler, fs_path, names):
         <nav class="crumbs" id="crumbs" aria-label="Breadcrumb">%(crumbs)s</nav>
         <div class="gitbar" id="gitbar" hidden>
           <span class="git-glyph" aria-hidden="true">&#9095;</span>
-          <span class="git-compare">Comparing
+          <span class="git-compare"><span class="git-label">Comparing</span>
             <select class="git-base" id="git-base" aria-label="Compare base"></select>
             <span class="git-arrow" aria-hidden="true">&larr;</span>
             <span class="git-branch" id="git-branch"></span>
