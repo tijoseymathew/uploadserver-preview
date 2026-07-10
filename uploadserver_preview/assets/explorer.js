@@ -25,9 +25,16 @@
 
   // The directory this shell was rendered for, and the folder the user last
   // touched (expanded or picked a file from). The upload modal defaults its
-  // destination to lastDir.
+  // destination to lastDir, and the git layer follows it too — moving around
+  // the tree re-scopes /__git__ to the directory being looked at.
   var cwd = tree.dataset.cwd || '/';
   var lastDir = cwd;
+
+  function setLastDir(dir) {
+    if (!dir) return;
+    lastDir = dir;
+    if (window.PreviewGit && window.PreviewGit.setScope) window.PreviewGit.setScope(dir);
+  }
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -78,7 +85,7 @@
     var children = row.nextElementSibling;
     if (!twist || !children || !children.classList.contains('tchildren')) return;
 
-    lastDir = row.dataset.path || lastDir;
+    setLastDir(row.dataset.path);
 
     if (twist.getAttribute('aria-expanded') === 'true') {
       twist.setAttribute('aria-expanded', 'false');
@@ -174,7 +181,7 @@
     var filePath = pathFromView(view);
     if (!filePath) return;
     if (window.PreviewViewer) window.PreviewViewer.load(filePath);
-    if (anchor) lastDir = parentDirOf(anchor);
+    if (anchor) setLastDir(parentDirOf(anchor));
     if (rawlink) rawlink.hidden = false;
     markActive(anchor);
     // on mobile, fold the navigator sheet so the file is what you land on
