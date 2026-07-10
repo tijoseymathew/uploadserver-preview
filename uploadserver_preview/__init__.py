@@ -28,6 +28,22 @@ import uploadserver
 
 __all__ = ["PreviewHTTPRequestHandler", "main", "serve"]
 
+
+def _package_version():
+    """The installed package version, for the subtle footer chip. Best-effort."""
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        try:
+            return version("uploadserver-preview")
+        except PackageNotFoundError:
+            return "dev"
+    except Exception:
+        return "dev"
+
+
+VERSION = _package_version()
+
 ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 ASSET_ROUTE = "/__preview_asset__/"
 VIEW_ROUTE = "/__view__"
@@ -403,7 +419,10 @@ def _render_shell(handler, fs_path, names):
 %(rows)s
         </div>
       </div>
-      <div class="exp-foot" id="exp-foot">%(footer)s</div>
+      <div class="exp-foot">
+        <span id="exp-foot">%(footer)s</span>
+        <span class="exp-version" title="uploadserver-preview %(version)s">v%(version)s</span>
+      </div>
     </aside>
     <section class="pane">
       <header class="topbar">
@@ -458,6 +477,7 @@ def _render_shell(handler, fs_path, names):
         "cwd": esc(url_path),
         "rows": rows,
         "footer": footer,
+        "version": esc(VERSION),
         "scripts": scripts,
     }
 
