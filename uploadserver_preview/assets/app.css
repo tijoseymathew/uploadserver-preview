@@ -4,6 +4,10 @@
 
 * { box-sizing: border-box; }
 
+/* the hidden attribute always wins — components that set their own display
+   (flex/inline-flex) would otherwise defeat the UA's [hidden] rule */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
@@ -350,7 +354,6 @@ a:hover { text-decoration: underline; }
 /* git integration: the topbar gitbar ("Comparing <base> ← <branch>" + counts),
    per-file M/A/D badges in the tree, and folder change dots. Filled by git.js;
    everything stays hidden when the browsed directory is not in a git repo. */
-.gitbar[hidden] { display: none; } /* display:flex would defeat the hidden attr */
 .gitbar {
   flex: 0 1 auto;
   display: flex;
@@ -872,10 +875,6 @@ andypf-json-viewer {
   text-underline-offset: 2px;
 }
 .linkbtn:hover { color: var(--accent); }
-
-/* setting display on these overrides the UA [hidden] rule, so re-hide explicitly */
-.drop-overlay[hidden],
-.modal-backdrop[hidden] { display: none; }
 
 /* full-window drop hint shown while dragging files over the explorer */
 .drop-overlay {
