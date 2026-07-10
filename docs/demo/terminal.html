@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#0f1116; --panel:#14161b; --panel-2:#0f1116;
+    --border:#262b34; --border-strong:#30363d;
+    --text:#c9d1d9; --text-strong:#f0f6fc; --muted:#8b949e;
+    --accent:#4c8dff; --accent-fg:#79c0ff; --green:#3fb950;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 620px at 50% -8%, #171a21 0%, var(--bg) 62%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--text);
+  }
+  .caption{font-size:26px;letter-spacing:.01em;color:var(--text);font-weight:600}
+  .caption .sub{color:var(--muted);font-weight:400;font-size:20px}
+  .term{
+    width:840px;max-width:88vw;
+    background:var(--panel);
+    border:1px solid var(--border-strong);
+    border-radius:14px;
+    box-shadow:0 24px 60px -12px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.3);
+    overflow:hidden;
+  }
+  .bar{
+    display:flex;align-items:center;gap:8px;
+    height:44px;padding:0 16px;
+    background:linear-gradient(#1b1f27,#171a21);
+    border-bottom:1px solid var(--border);
+  }
+  .dot{width:12px;height:12px;border-radius:50%}
+  .dot.r{background:#ff5f56}.dot.y{background:#ffbd2e}.dot.g{background:#27c93f}
+  .title{flex:1;text-align:center;font-size:13px;color:var(--muted);letter-spacing:.02em;margin-right:36px}
+  .body{
+    padding:26px 28px 30px;
+    font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    font-size:18px;line-height:1.75;
+  }
+  .line{white-space:pre;display:flex;align-items:baseline;flex-wrap:wrap}
+  .prompt .user{color:var(--green);font-weight:600}
+  .prompt .ppath{color:var(--accent-fg)}
+  .prompt .psig{color:var(--muted);margin:0 12px 0 2px}
+  #cmd .tok{color:var(--accent-fg)}
+  #cmd{color:var(--text-strong)}
+  .cursor{display:inline-block;width:10px;height:20px;background:var(--text-strong);margin-left:2px;transform:translateY(3px)}
+  #out{margin-top:14px}
+  .oline{color:var(--muted);white-space:pre-wrap}
+  .oline .em{color:var(--text)}
+  .hint{margin-top:16px;color:var(--accent-fg);white-space:pre-wrap}
+  .hint .arr{color:var(--muted);margin-right:8px}
+</style>
+</head>
+<body>
+  <div class="caption">Serve a folder, preview anything <span class="sub">— one command, no build step</span></div>
+  <div class="term">
+    <div class="bar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="title">dev@remote-box: ~</span>
+    </div>
+    <div class="body">
+      <div class="line"><span class="prompt"><span class="user">dev@remote-box</span><span class="psig">~$</span></span><span id="cmd"></span><span id="cur" class="cursor"></span></div>
+      <div id="out"></div>
+    </div>
+  </div>
+<script>
+  const CMD = "uvx uploadserver-preview";
+  const OUT = [
+    'File upload available at <span class="em">/upload</span>',
+    'Serving HTTP on 0.0.0.0 port <span class="em">8000</span> (http://0.0.0.0:8000/) ...',
+  ];
+  function colorize(shown){
+    if(shown.length >= 3){
+      return '<span class="tok">uvx</span>' + escapeHtml(shown.slice(3));
+    }
+    return escapeHtml(shown);
+  }
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  window.setState = function(n, run, cursor){
+    document.getElementById('cmd').innerHTML = colorize(CMD.slice(0, n));
+    const cur = document.getElementById('cur');
+    cur.style.opacity = cursor ? '1' : '0';
+    const out = document.getElementById('out');
+    if(run){
+      cur.style.display = 'none';
+      out.innerHTML =
+        OUT.map(l => '<div class="oline">' + l + '</div>').join('') +
+        '<div class="hint"><span class="arr">&#8618;</span>open http://localhost:8000 &mdash; a full file explorer in your browser</div>';
+    } else {
+      cur.style.display = 'inline-block';
+      out.innerHTML = '';
+    }
+  };
+  window.setState(0, false, true);
+</script>
+</body>
+</html>

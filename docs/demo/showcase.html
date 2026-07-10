@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{ --bg:#0f1116; --muted:#8b949e; --text:#c9d1d9; --accent:#79c0ff; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 620px at 50% -8%, #171a21 0%, var(--bg) 62%);
+    color:var(--text);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    height:100vh;gap:34px;
+  }
+  .caption{
+    font-size:24px;letter-spacing:.01em;color:var(--text);font-weight:600;
+    display:flex;align-items:center;gap:12px;
+  }
+  .caption .sub{color:var(--muted);font-weight:400;font-size:19px}
+  .row{display:flex;gap:70px;align-items:flex-end}
+  .phone{display:flex;flex-direction:column;align-items:center;gap:16px}
+  .device{
+    width:308px;height:666px;border-radius:38px;
+    background:#05070b;
+    padding:11px;
+    box-shadow:0 30px 70px -18px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04),
+               inset 0 0 0 2px #1b1f27;
+    position:relative;
+  }
+  .device::after{        /* notch */
+    content:"";position:absolute;top:11px;left:50%;transform:translateX(-50%);
+    width:104px;height:22px;background:#05070b;border-radius:0 0 14px 14px;z-index:2;
+  }
+  .screen{
+    width:100%;height:100%;border-radius:28px;overflow:hidden;background:#0f1116;
+  }
+  .screen img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+  .label{font-size:18px;color:var(--muted)}
+  .label b{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+  <div class="caption" id="caption"></div>
+  <div class="row" id="row"></div>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.getElementById('caption').innerHTML =
+    q.get('caption') || 'Works on mobile <span class="sub">— the sidebar folds into a sheet</span>';
+  const phones = (q.get('phones') || '').split(';').filter(Boolean);
+  const row = document.getElementById('row');
+  for (const p of phones){
+    const [src, label] = p.split('|');
+    const el = document.createElement('div');
+    el.className = 'phone';
+    el.innerHTML =
+      '<div class="device"><div class="screen"><img src="' + src + '"></div></div>' +
+      '<div class="label">' + (label || '') + '</div>';
+    row.appendChild(el);
+  }
+</script>
+</body>
+</html>
