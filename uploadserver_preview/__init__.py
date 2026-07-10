@@ -37,6 +37,33 @@ _ASSET_FILES = frozenset(
     f for f in os.listdir(ASSETS_DIR) if os.path.isfile(os.path.join(ASSETS_DIR, f))
 )
 
+
+def _compute_asset_version():
+    """A short fingerprint of the bundled assets (size + mtime of each file).
+
+    Appended to asset URLs as ?v=... so a long browser cache never serves a
+    stale stylesheet/script after the assets change: a change flips the token,
+    which flips the URL, which forces a refetch. Computed once at import.
+    """
+    import hashlib
+
+    h = hashlib.sha1()
+    for f in sorted(_ASSET_FILES):
+        try:
+            st = os.stat(os.path.join(ASSETS_DIR, f))
+            h.update(("%s:%d:%d;" % (f, st.st_mtime_ns, st.st_size)).encode("utf-8"))
+        except OSError:
+            pass
+    return h.hexdigest()[:10]
+
+
+ASSET_VERSION = _compute_asset_version()
+
+
+def _asset_url(name):
+    """URL for a bundled asset, cache-busted by the current asset fingerprint."""
+    return "%s%s?v=%s" % (ASSET_ROUTE, name, ASSET_VERSION)
+
 # Same-origin only. No inline scripts (all JS is external), so script-src stays
 # 'self'. 'unsafe-inline' is allowed for styles because the JSON web component and
 # the highlight/diff themes inject inline styles.
@@ -183,27 +210,39 @@ def _dir_index(handler, url_path):
 def _hljs_css_links(theme):
     """The highlight.js theme stylesheet link(s) for the given --theme."""
     if theme == "light":
-        return '<link rel="stylesheet" href="%shljs-github.min.css">' % ASSET_ROUTE
+        return '<link rel="stylesheet" href="%s">' % _asset_url("hljs-github.min.css")
     if theme == "dark":
-        return '<link rel="stylesheet" href="%shljs-github-dark.min.css">' % ASSET_ROUTE
+        return '<link rel="stylesheet" href="%s">' % _asset_url("hljs-github-dark.min.css")
     # auto — follow the OS preference
     return (
-        '<link rel="stylesheet" href="%shljs-github.min.css" media="(prefers-color-scheme: light)">\n'
-        '<link rel="stylesheet" href="%shljs-github-dark.min.css" media="(prefers-color-scheme: dark)">'
-        % (ASSET_ROUTE, ASSET_ROUTE)
+        '<link rel="stylesheet" href="%s" media="(prefers-color-scheme: light)">\n'
+        '<link rel="stylesheet" href="%s" media="(prefers-color-scheme: dark)">'
+        % (_asset_url("hljs-github.min.css"), _asset_url("hljs-github-dark.min.css"))
+    )
+
+
+def _head_links(theme):
+    """The full <link> set shared by the viewer and explorer pages."""
+    return "\n".join(
+        [
+            '<link rel="stylesheet" href="%s">' % _asset_url("themes.css"),
+            '<link rel="stylesheet" href="%s">' % _asset_url("app.css"),
+            '<link rel="stylesheet" href="%s">' % _asset_url("diff2html.min.css"),
+            _hljs_css_links(theme),
+        ]
     )
 
 
 def _script_tags(scripts):
     return "\n".join(
-        '<script defer src="%s%s"></script>' % (ASSET_ROUTE, s) for s in scripts
+        '<script defer src="%s"></script>' % _asset_url(s) for s in scripts
     )
 
 
 def get_viewer_page(theme):
     """The static viewer shell. The path is read client-side from ?path=."""
     color_scheme = uploadserver.COLOR_SCHEME.get(theme, "light dark")
-    hljs_css = _hljs_css_links(theme)
+    head_links = _head_links(theme)
     scripts = _script_tags(_SCRIPTS)
 
     return (
@@ -214,10 +253,7 @@ def get_viewer_page(theme):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="%(color_scheme)s">
 <title>Preview</title>
-<link rel="stylesheet" href="%(route)sthemes.css">
-<link rel="stylesheet" href="%(route)sapp.css">
-<link rel="stylesheet" href="%(route)sdiff2html.min.css">
-%(hljs_css)s
+%(head_links)s
 </head>
 <body>
 <div class="app">
@@ -246,8 +282,7 @@ def get_viewer_page(theme):
         % {
             "theme": theme,
             "color_scheme": color_scheme,
-            "route": ASSET_ROUTE,
-            "hljs_css": hljs_css,
+            "head_links": head_links,
             "scripts": scripts,
         }
     ).encode("utf-8")
@@ -347,10 +382,7 @@ def _render_shell(handler, fs_path, names):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="%(color_scheme)s">
 <title>%(title)s</title>
-<link rel="stylesheet" href="%(route)sthemes.css">
-<link rel="stylesheet" href="%(route)sapp.css">
-<link rel="stylesheet" href="%(route)sdiff2html.min.css">
-%(hljs_css)s
+%(head_links)s
 </head>
 <body>
 <div class="app app--shell">
@@ -394,8 +426,7 @@ def _render_shell(handler, fs_path, names):
         "theme": theme,
         "color_scheme": uploadserver.COLOR_SCHEME.get(theme, "light dark"),
         "title": esc(url_path),
-        "route": ASSET_ROUTE,
-        "hljs_css": _hljs_css_links(theme),
+        "head_links": _head_links(theme),
         "folder": esc(folder),
         "crumbs": crumbs,
         "rows": rows,
