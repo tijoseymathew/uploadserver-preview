@@ -18,13 +18,13 @@ Reported paths are relative to `root` (git runs with `-C <root>` and
 `--relative`), which also scopes the change map to that subtree.
 """
 
+import os
 import re
 import subprocess
 
 __all__ = ["head_label", "status", "file_diff"]
 
 _GIT_TIMEOUT = 5           # seconds; git on a local repo is normally instant
-_DEFAULT_BASES = ("main", "master", "develop")
 _SHORTSTAT_RE = re.compile(r"(\d+) insertion|(\d+) deletion")
 
 
@@ -63,6 +63,25 @@ def head_label(root):
     return _head(root)[0]
 
 
+def _repo_scope(root, boundary):
+    """(effective_root, url_prefix) for the repo enclosing `root`.
+
+    effective_root is the repo toplevel clamped to `boundary` (the served
+    root) so change maps never reach above the served tree; url_prefix is its
+    URL path relative to boundary ("/" when they coincide). Keys in the change
+    map are relative to effective_root, so badges cover the whole repo no
+    matter which of its subdirectories the client asked about.
+    """
+    top = _run(root, "rev-parse", "--show-toplevel")
+    eff = root
+    if top and top.strip():
+        top = os.path.realpath(top.strip())
+        eff = top if (top == boundary or top.startswith(boundary + os.sep)) else boundary
+    rel = os.path.relpath(eff, boundary)
+    prefix = "/" if rel == "." else "/" + rel.replace(os.sep, "/") + "/"
+    return eff, prefix
+
+
 def _branches(root):
     out = _run(root, "branch", "--format=%(refname:short)")
     if out is None:
@@ -71,17 +90,16 @@ def _branches(root):
 
 
 def _pick_base(requested, branches, head):
-    """The compare base: the validated request, else main/master/develop, else HEAD.
+    """The compare base: the validated request, else the current branch.
 
-    "HEAD" is always a legal base (it means: show uncommitted changes only),
-    and is the fallback in repos that have none of the conventional trunks.
+    Defaulting to the branch itself means the default view is "uncommitted
+    changes only" — comparing against another branch is an explicit choice.
+    "HEAD" is always legal too (equivalent for an attached HEAD, and the
+    default when detached).
     """
     if requested and (requested in branches or requested == "HEAD"):
         return requested
-    for cand in _DEFAULT_BASES:
-        if cand in branches and cand != head:
-            return cand
-    return "HEAD"
+    return head if head in branches else "HEAD"
 
 
 def _changes(root, base):
@@ -117,24 +135,28 @@ def _counts(root, base):
     return ins, dels
 
 
-def status(root, base=None):
-    """The /__git__ payload for the repo at `root`, or None outside a repo.
+def status(root, base=None, boundary=None):
+    """The /__git__ payload for the repo enclosing `root`, or None outside one.
 
-    {branch, detached, base, branches, changes: {relpath: M|A|D},
-     insertions, deletions}
+    {branch, detached, base, branches, prefix, changes: {relpath: M|A|D},
+     insertions, deletions} — `prefix` is the repo's URL path under `boundary`
+    (the served root; defaults to `root`) and the change map is relative to it.
     """
     head, detached = _head(root)
     if head is None:
         return None
-    branches = _branches(root)
+    boundary = os.path.realpath(boundary) if boundary else root
+    eff, prefix = _repo_scope(root, boundary)
+    branches = _branches(eff)
     base = _pick_base(base, branches, head)
-    ins, dels = _counts(root, base)
+    ins, dels = _counts(eff, base)
     return {
         "branch": head,
         "detached": detached,
         "base": base,
         "branches": branches,
-        "changes": _changes(root, base),
+        "prefix": prefix,
+        "changes": _changes(eff, base),
         "insertions": ins,
         "deletions": dels,
     }

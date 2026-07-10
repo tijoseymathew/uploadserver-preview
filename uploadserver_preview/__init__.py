@@ -778,7 +778,7 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         if git_dir is None:
             self.send_error(http.HTTPStatus.BAD_REQUEST, "Invalid path")
             return
-        st = gitinfo.status(git_dir, base)
+        st = gitinfo.status(git_dir, base, boundary=_git_root())
         data = {"enabled": False} if st is None else dict(st, enabled=True)
         body = json.dumps(data).encode("utf-8")
         self._send_bytes(body, "application/json; charset=utf-8", cache=False, csp=True)
