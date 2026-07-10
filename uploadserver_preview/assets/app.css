@@ -624,6 +624,193 @@ andypf-json-viewer {
 .markdown-body img { max-width: 100%; }
 .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 1.6em 0; }
 
+/* ===========================================================================
+   Upload — modal dialog, drop zone, and the window-wide drag overlay.
+   =========================================================================== */
+.linkbtn {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.linkbtn:hover { color: var(--accent); }
+
+/* setting display on these overrides the UA [hidden] rule, so re-hide explicitly */
+.drop-overlay[hidden],
+.modal-backdrop[hidden] { display: none; }
+
+/* full-window drop hint shown while dragging files over the explorer */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(2px);
+}
+.drop-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 52px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--panel);
+  color: var(--text-strong);
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: .02em;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+.drop-overlay .do-glyph { font-size: 26px; color: var(--accent); line-height: 1; }
+
+/* modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  backdrop-filter: blur(2px);
+}
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(80vh, 640px);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+  overflow: hidden;
+}
+.modal-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-title { margin: 0; font-size: 15px; font-weight: 650; color: var(--text-strong); }
+.modal-close {
+  appearance: none;
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal-close:hover { color: var(--text-strong); }
+
+.modal-dest {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 16px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.modal-dest .dest-path {
+  color: var(--accent-fg);
+  background: var(--accent-weak);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.dropzone {
+  flex: 0 0 auto;
+  margin: 12px 16px;
+  padding: 26px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--muted);
+  transition: border-color .12s ease, background .12s ease;
+}
+.dropzone.is-over { border-color: var(--accent); background: var(--accent-weak); }
+.dropzone .dz-glyph { font-size: 22px; color: var(--accent); line-height: 1; }
+.dropzone .dz-text { margin: 4px 0 0; font-size: 13.5px; color: var(--text); }
+.dropzone .dz-sub { margin: 0; font-size: 12.5px; }
+@media (prefers-reduced-motion: reduce) { .dropzone { transition: none; } }
+
+.filelist {
+  flex: 1 1 auto;
+  overflow: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  min-height: 0;
+}
+.fileitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.fileitem:last-child { border-bottom: none; }
+.fi-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.fi-size { flex: 0 0 auto; color: var(--faint); font-variant-numeric: tabular-nums; }
+.fi-remove {
+  appearance: none;
+  flex: 0 0 auto;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.fi-remove:hover { color: var(--danger); }
+
+.modal-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+.modal-foot .btn:disabled { opacity: .5; cursor: not-allowed; }
+.upload-status {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload-status.is-ok { color: var(--add-fg, var(--accent)); }
+.upload-status.is-err { color: var(--danger); }
+.upload-status.is-busy { color: var(--accent-fg); }
+
 /* ---------- responsive ---------- */
 @media (max-width: 560px) {
   .row { grid-template-columns: 1fr auto; }
@@ -631,4 +818,5 @@ andypf-json-viewer {
   .meta { display: none; }
   .titlebar .title { display: none; }
   .content { padding: 20px 14px 80px; }
+  .modal { max-height: 88vh; }
 }
