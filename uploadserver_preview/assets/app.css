@@ -383,7 +383,10 @@ a:hover { text-decoration: underline; }
   color: var(--text);
   font: inherit;
   padding: 1px 4px;
-  max-width: 104px;
+  /* natural width (full branch name) when there is room; shrink when not */
+  flex: 0 1 auto;
+  min-width: 6ch;
+  text-overflow: ellipsis;
   cursor: pointer;
 }
 .gitbar .git-base:hover { border-color: var(--accent); }
