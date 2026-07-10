@@ -18,7 +18,23 @@
   var STATE = { enabled: false, branch: null, base: null, branches: [], changes: {} };
 
   function decode(p) { try { return decodeURIComponent(p); } catch (e) { return p; } }
-  function relKey(urlPath) { return decode(urlPath).replace(/^\/+/, ''); }
+
+  // The directory this page's git queries are scoped to: the explorer's cwd,
+  // or the viewed file's directory on the standalone viewer page. The change
+  // map /__git__ returns is relative to this scope.
+  var scope = (function () {
+    if (tree) return decode(tree.dataset.cwd || '/');
+    var p = new URLSearchParams(location.search).get('path');
+    if (p) return decode(p).replace(/[^\/]*$/, '') || '/';
+    return '/';
+  })();
+
+  // "/sub/file.py" -> the change-map key: the path relative to the scope dir.
+  function relKey(urlPath) {
+    var p = decode(urlPath);
+    if (p.indexOf(scope) === 0) p = p.slice(scope.length);
+    return p.replace(/^\/+/, '');
+  }
 
   // ---------- public surface (used by viewer.js) ----------
   // changeFor("/sub/file.py") -> "M" | "A" | "D" | null
@@ -45,7 +61,8 @@
 
   // ---------- status ----------
   function refresh(base) {
-    var url = '/__git__' + (base ? '?base=' + encodeURIComponent(base) : '');
+    var url = '/__git__?path=' + encodeURIComponent(scope) +
+              (base ? '&base=' + encodeURIComponent(base) : '');
     return fetch(url, { credentials: 'same-origin' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (data) {

@@ -347,21 +347,23 @@ a:hover { text-decoration: underline; }
   padding: 20px 2px;
 }
 
-/* git integration: the sidebar gitbar ("Comparing <base> ← <branch>" + counts),
+/* git integration: the topbar gitbar ("Comparing <base> ← <branch>" + counts),
    per-file M/A/D badges in the tree, and folder change dots. Filled by git.js;
-   everything stays hidden outside a repo. */
+   everything stays hidden when the browsed directory is not in a git repo. */
+.gitbar[hidden] { display: none; } /* display:flex would defeat the hidden attr */
 .gitbar {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 14px;
-  border-bottom: 1px solid var(--border);
+  min-width: 0;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
 }
+/* the topbar gets crowded on small screens — the tree badges still tell the story */
+@media (max-width: 900px) { .gitbar { display: none; } }
 .gitbar .git-glyph { flex: 0 0 auto; color: var(--accent-fg); }
 .gitbar .git-compare {
   display: inline-flex;

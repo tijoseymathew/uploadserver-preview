@@ -1,9 +1,12 @@
 """uploadserver-preview — read-only git integration.
 
-Shells out to git in the served directory to answer two questions for the
-explorer UI: "what changed on this branch vs a compare base?" (`status`, behind
-`/__git__`) and "what is the diff for one file?" (`file_diff`, behind
-`/__diff__`).
+Shells out to git in the directory being *browsed* (not the served root — the
+served tree may contain repositories anywhere below it) to answer two
+questions for the explorer UI: "what changed on this branch vs a compare
+base?" (`status`, behind `/__git__`) and "what is the diff for one file?"
+(`file_diff`, behind `/__diff__`). Repository discovery is git's own: it walks
+up from `root` to the enclosing work tree, so browsing a subdirectory of a
+repo works too.
 
 Everything fails soft: outside a repository, with git missing, or on any git
 error the callers get None/"" and the UI simply hides its git surfaces. Only
@@ -11,9 +14,8 @@ read-only git commands are ever run, and the compare base is validated against
 the repo's actual branch list, so no request-supplied string reaches git as
 anything but a checked ref name or a `--`-guarded path.
 
-Paths are relative to the served root (git runs with `-C <root>` and
-`--relative`), which also scopes the change map to the served tree when the
-root is a subdirectory of the repository.
+Reported paths are relative to `root` (git runs with `-C <root>` and
+`--relative`), which also scopes the change map to that subtree.
 """
 
 import re

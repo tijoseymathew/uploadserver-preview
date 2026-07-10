@@ -230,17 +230,31 @@ def _dir_index(handler, url_path):
 
 
 def _git_root():
-    """The served directory (absolute) — where gitinfo runs its commands."""
+    """The served directory (absolute) — the containment boundary for git paths."""
     return os.path.realpath(getattr(uploadserver.args, "directory", os.getcwd()))
 
 
-def _chip_html():
-    """The titlebar context chip: the git branch when serving a repo, else "local".
+def _resolve_git_dir(handler, url_path):
+    """The filesystem directory git should run in for a browsed `url_path`.
+
+    Returns an absolute path inside the served root, or None if the request
+    points outside it (symlink/.. escapes). Files resolve to their parent.
+    """
+    root = _git_root()
+    # translate_path unquotes its argument; hand it a quoted path (see _dir_index)
+    real = os.path.realpath(handler.translate_path(urllib.parse.quote(url_path)))
+    if real != root and not real.startswith(root + os.sep):
+        return None
+    return real if os.path.isdir(real) else os.path.dirname(real)
+
+
+def _chip_html(fs_dir):
+    """The titlebar context chip: the git branch when browsing a repo, else "local".
 
     Server-rendered so it is right without JS; git.js refreshes the label (and
     keeps it in sync with the compare picker) once /__git__ answers.
     """
-    label = gitinfo.head_label(_git_root())
+    label = gitinfo.head_label(fs_dir)
     if label:
         text = "&#9095; %s" % _html_escape(label)  # ⎇ branch
     else:
@@ -283,8 +297,12 @@ def _script_tags(scripts):
     )
 
 
-def get_viewer_page(theme):
-    """The static viewer shell. The path is read client-side from ?path=."""
+def get_viewer_page(theme, git_dir=None):
+    """The static viewer shell. The path is read client-side from ?path=.
+
+    `git_dir` (the viewed file's directory, when resolvable) seeds the branch
+    chip server-side.
+    """
     color_scheme = uploadserver.COLOR_SCHEME.get(theme, "light dark")
     head_links = _head_links(theme)
     scripts = _script_tags(_SCRIPTS)
@@ -329,7 +347,7 @@ def get_viewer_page(theme):
             "theme": theme,
             "color_scheme": color_scheme,
             "head_links": head_links,
-            "chip": _chip_html(),
+            "chip": _chip_html(git_dir or _git_root()),
             "scripts": scripts,
         }
     ).encode("utf-8")
@@ -446,15 +464,6 @@ def _render_shell(handler, fs_path, names):
         <span class="exp-label">Explorer</span>
         <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
       </div>
-      <div class="gitbar" id="gitbar" hidden>
-        <span class="git-glyph" aria-hidden="true">&#9095;</span>
-        <span class="git-compare">Comparing
-          <select class="git-base" id="git-base" aria-label="Compare base"></select>
-          <span class="git-arrow" aria-hidden="true">&larr;</span>
-          <span class="git-branch" id="git-branch"></span>
-        </span>
-        <span class="git-counts" id="git-counts" title="Lines added / removed vs the compare base"></span>
-      </div>
       <div class="tree" id="tree" data-cwd="%(cwd)s">
         <div class="tree-inner">
 %(rows)s
@@ -468,6 +477,15 @@ def _render_shell(handler, fs_path, names):
     <section class="pane">
       <header class="topbar">
         <nav class="crumbs" id="crumbs" aria-label="Breadcrumb">%(crumbs)s</nav>
+        <div class="gitbar" id="gitbar" hidden>
+          <span class="git-glyph" aria-hidden="true">&#9095;</span>
+          <span class="git-compare">Comparing
+            <select class="git-base" id="git-base" aria-label="Compare base"></select>
+            <span class="git-arrow" aria-hidden="true">&larr;</span>
+            <span class="git-branch" id="git-branch"></span>
+          </span>
+          <span class="git-counts" id="git-counts" title="Lines added / removed vs the compare base"></span>
+        </div>
         <span class="spacer"></span>
         <span class="badge" id="kind"></span>
         <span class="meta" id="meta"></span>
@@ -518,7 +536,7 @@ def _render_shell(handler, fs_path, names):
         "title": esc(url_path),
         "head_links": _head_links(theme),
         "folder": esc(folder),
-        "chip": _chip_html(),
+        "chip": _chip_html(fs_path),
         "crumbs": crumbs,
         "cwd": esc(url_path),
         "rows": rows,
@@ -676,8 +694,12 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         """Handle preview-specific routes. Returns True if the request was served."""
         route = urllib.parse.urlsplit(self.path).path
         if route == VIEW_ROUTE:
+            # seed the branch chip from the viewed file's directory
+            query = urllib.parse.urlsplit(self.path).query
+            raw = (urllib.parse.parse_qs(query).get("path") or [""])[0]
+            git_dir = _resolve_git_dir(self, urllib.parse.unquote(raw)) if raw else None
             self._send_bytes(
-                get_viewer_page(getattr(uploadserver.args, "theme", "auto")),
+                get_viewer_page(getattr(uploadserver.args, "theme", "auto"), git_dir),
                 "text/html; charset=utf-8",
                 cache=False,
                 csp=True,
@@ -741,12 +763,22 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
     def _serve_git(self):
         """Serve the git status JSON (branch, compare base, change map, counts).
 
-        `?base=<branch>` picks the compare base; gitinfo validates it against
-        the repo's real branch list. Outside a repo: {"enabled": false}.
+        `?path=<url-dir>` scopes the query to the directory being browsed (the
+        served tree may hold repos anywhere below the root); `?base=<branch>`
+        picks the compare base, which gitinfo validates against the repo's
+        real branch list. Outside a repo: {"enabled": false}.
         """
-        query = urllib.parse.urlsplit(self.path).query
-        base = (urllib.parse.parse_qs(query).get("base") or [None])[0]
-        st = gitinfo.status(_git_root(), base)
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+        base = (query.get("base") or [None])[0]
+        raw = (query.get("path") or ["/"])[0]
+        url_path = urllib.parse.unquote(raw)
+        if not url_path.startswith("/"):
+            url_path = "/" + url_path
+        git_dir = _resolve_git_dir(self, url_path)
+        if git_dir is None:
+            self.send_error(http.HTTPStatus.BAD_REQUEST, "Invalid path")
+            return
+        st = gitinfo.status(git_dir, base)
         data = {"enabled": False} if st is None else dict(st, enabled=True)
         body = json.dumps(data).encode("utf-8")
         self._send_bytes(body, "application/json; charset=utf-8", cache=False, csp=True)
@@ -755,7 +787,8 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         """Serve one file's unified diff vs the compare base as text/plain.
 
         `?path=<url-path>&base=<branch>`. The path is resolved the same way as
-        file serving and must stay inside the served root.
+        file serving and must stay inside the served root; git runs in the
+        file's directory so repo discovery matches what /__git__ reported.
         """
         query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
         raw = (query.get("path") or [""])[0]
@@ -767,11 +800,10 @@ class PreviewHTTPRequestHandler(uploadserver.SimpleHTTPRequestHandler):
         # translate_path unquotes its argument; hand it a quoted path (see
         # _dir_index). realpath containment defends against ../ and symlinks.
         real = os.path.realpath(self.translate_path(urllib.parse.quote(url_path)))
-        if real != root and not real.startswith(root + os.sep):
+        if real == root or not real.startswith(root + os.sep):
             self.send_error(http.HTTPStatus.BAD_REQUEST, "Invalid path")
             return
-        relpath = os.path.relpath(real, root)
-        text = gitinfo.file_diff(root, relpath, base)
+        text = gitinfo.file_diff(os.path.dirname(real), os.path.basename(real), base)
         self._send_bytes(
             text.encode("utf-8", "surrogateescape"),
             "text/plain; charset=utf-8",
