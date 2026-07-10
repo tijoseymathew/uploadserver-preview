@@ -22,19 +22,20 @@ import os
 import re
 import subprocess
 
-__all__ = ["head_label", "status", "file_diff"]
+__all__ = ["head_label", "ignored_names", "status", "file_diff"]
 
 _GIT_TIMEOUT = 5           # seconds; git on a local repo is normally instant
 _SHORTSTAT_RE = re.compile(r"(\d+) insertion|(\d+) deletion")
 
 
-def _run(root, *args, ok_returncodes=(0,)):
+def _run(root, *args, ok_returncodes=(0,), input=None):
     """Run a read-only git command in `root`; stdout str, or None on any failure."""
     try:
         p = subprocess.run(
             ("git", "-C", root) + args,
             capture_output=True,
             timeout=_GIT_TIMEOUT,
+            input=input.encode("utf-8", "surrogateescape") if input is not None else None,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -61,6 +62,23 @@ def head_label(root):
     Used to server-render the titlebar chip; cheap enough to call per listing.
     """
     return _head(root)[0]
+
+
+def ignored_names(root, names):
+    """The subset of `names` (entries of the directory `root`) that gitignore
+    rules exclude, as a set. Empty outside a repo or on any git failure.
+
+    Names go to git over stdin (never as arguments), so arbitrary filenames are
+    safe. check-ignore exits 1 when nothing matched — still a success here.
+    """
+    names = [n for n in names if n]
+    if not names:
+        return set()
+    out = _run(root, "check-ignore", "--stdin", "-z",
+               ok_returncodes=(0, 1), input="\0".join(names))
+    if not out:
+        return set()
+    return {n for n in out.split("\0") if n}
 
 
 def _repo_scope(root, boundary):

@@ -178,17 +178,21 @@ def _is_previewable(name):
 def _list_entries(fs_path, names):
     """Sort a directory's names: dirs first, then files, case-insensitive.
 
-    Returns a list of (name, is_dir, full_fs_path) tuples.
+    Returns a list of (name, is_dir, full_fs_path, hidden) tuples. `hidden`
+    marks dotfiles and gitignored entries — the tree ships them with an
+    is-hidden class that CSS hides by default (the sidebar toggle reveals them).
     """
+    ignored = gitinfo.ignored_names(fs_path, names)
     entries = []
     for name in names:
         full = os.path.join(fs_path, name)
-        entries.append((name, os.path.isdir(full), full))
+        hidden = name.startswith(".") or name in ignored
+        entries.append((name, os.path.isdir(full), full, hidden))
     entries.sort(key=lambda e: (not e[1], e[0].lower()))
     return entries
 
 
-def _entry_json(url_path, name, is_dir, full):
+def _entry_json(url_path, name, is_dir, full, hidden):
     """Describe one listing entry as JSON-serialisable data for the explorer.
 
     `url_path` is the (unquoted) URL of the containing directory, ending in "/".
@@ -196,7 +200,8 @@ def _entry_json(url_path, name, is_dir, full):
     """
     quoted = urllib.parse.quote(name)
     glyph_cls, glyph_ch = _kind_glyph(name, is_dir)
-    d = {"name": name, "is_dir": is_dir, "glyph_cls": glyph_cls, "glyph": glyph_ch}
+    d = {"name": name, "is_dir": is_dir, "glyph_cls": glyph_cls, "glyph": glyph_ch,
+         "hidden": hidden}
     if is_dir:
         d["path"] = url_path + quoted + "/"
     else:
@@ -225,7 +230,7 @@ def _dir_index(handler, url_path):
     entries = _list_entries(fs_path, names)
     return {
         "path": url_path,
-        "entries": [_entry_json(url_path, n, d, f) for (n, d, f) in entries],
+        "entries": [_entry_json(url_path, n, d, f, h) for (n, d, f, h) in entries],
     }
 
 
@@ -353,7 +358,7 @@ def get_viewer_page(theme, git_dir=None):
     ).encode("utf-8")
 
 
-def _tree_row_html(url_path, name, is_dir, full, depth):
+def _tree_row_html(url_path, name, is_dir, full, hidden, depth):
     """One row of the explorer file-tree. Mirrors rowHtml() in explorer.js.
 
     Directories render a twist/caret button and a lazy-loaded `.tchildren`
@@ -364,15 +369,16 @@ def _tree_row_html(url_path, name, is_dir, full, depth):
     glyph_cls, glyph_ch = _kind_glyph(name, is_dir)
     quoted = urllib.parse.quote(name)
     style = ' style="--depth:%d"' % depth
+    hid = " is-hidden" if hidden else ""
     if is_dir:
         dpath = url_path + quoted + "/"
         return (
-            '<div class="trow isdir" data-path="%s"%s>'
+            '<div class="trow isdir%s" data-path="%s"%s>'
             '<button class="twist glyph %s" type="button" aria-expanded="false" '
             'aria-label="Toggle %s">%s</button>'
             '<span class="tname">%s</span>'
             '</div><div class="tchildren" hidden></div>'
-            % (esc(dpath), style, glyph_cls, esc(name), glyph_ch, esc(name))
+            % (hid, esc(dpath), style, glyph_cls, esc(name), glyph_ch, esc(name))
         )
     try:
         size_h = _human_size(os.path.getsize(full))
@@ -387,12 +393,12 @@ def _tree_row_html(url_path, name, is_dir, full, depth):
     else:
         anchor = '<a class="tname" href="%s" download>%s</a>' % (esc(quoted), esc(name))
     return (
-        '<div class="trow isfile"%s>'
+        '<div class="trow isfile%s"%s>'
         '<span class="twist-spacer" aria-hidden="true"></span>'
         '<span class="glyph %s" aria-hidden="true">%s</span>'
         '%s<span class="tsize">%s</span>'
         "</div>"
-        % (style, glyph_cls, glyph_ch, anchor, size_h)
+        % (hid, style, glyph_cls, glyph_ch, anchor, size_h)
     )
 
 
@@ -429,14 +435,17 @@ def _render_shell(handler, fs_path, names):
     esc = _html_escape
 
     crumbs = _breadcrumbs_html(url_path)
-    rows = "".join(_tree_row_html(url_path, n, d, f, 0) for (n, d, f) in entries)
+    rows = "".join(_tree_row_html(url_path, n, d, f, h, 0) for (n, d, f, h) in entries)
     if not rows:
         rows = '<div class="empty">This folder is empty.</div>'
 
     segs = [s for s in url_path.strip("/").split("/") if s]
     folder = segs[-1] if segs else "~"
     n = len(entries)
+    n_hidden = sum(1 for e in entries if e[3])
     footer = "%d item%s" % (n, "" if n == 1 else "s")
+    if n_hidden:
+        footer += " &middot; %d hidden" % n_hidden
 
     scripts = _script_tags(_SCRIPTS + ("explorer.js", "upload.js", "mobile.js"))
 
@@ -462,9 +471,11 @@ def _render_shell(handler, fs_path, names):
       <div class="sheet-grab" id="sheet-grab" aria-hidden="true"><span class="grabber"></span></div>
       <div class="side-head">
         <span class="exp-label">Explorer</span>
+        <button class="hid-toggle" id="hid-toggle" type="button" aria-pressed="false"
+                title="Show hidden &amp; git-ignored files">.*</button>
         <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
       </div>
-      <div class="tree" id="tree" data-cwd="%(cwd)s">
+      <div class="tree hide-hidden" id="tree" data-cwd="%(cwd)s">
         <div class="tree-inner">
 %(rows)s
         </div>

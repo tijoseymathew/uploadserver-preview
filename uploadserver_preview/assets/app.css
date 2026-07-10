@@ -276,6 +276,32 @@ a:hover { text-decoration: underline; }
 .side-head .exp-label { flex: 1 1 auto; }
 .btn-sm { font-size: 11.5px; padding: 4px 9px; }
 
+/* hidden & git-ignored files: rows carry is-hidden (server-marked); the tree's
+   hide-hidden class (the default) suppresses them, and the ".*" side-head
+   button toggles it. Revealed hidden rows render dimmed. */
+.hid-toggle {
+  appearance: none;
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.4;
+  padding: 3px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+.hid-toggle:hover { color: var(--text); border-color: var(--accent); }
+.hid-toggle[aria-pressed="true"] {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tree.hide-hidden .trow.is-hidden,
+.tree.hide-hidden .trow.is-hidden + .tchildren { display: none; }
+.trow.is-hidden { opacity: .68; }
+
 .pane {
   flex: 1 1 auto;
   display: flex;

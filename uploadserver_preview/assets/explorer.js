@@ -45,8 +45,9 @@
   // Build a tree row from an /__index__ entry. Mirrors _tree_row_html() server-side.
   function rowHtml(e, depth) {
     var style = ' style="--depth:' + depth + '"';
+    var hid = e.hidden ? ' is-hidden' : '';
     if (e.is_dir) {
-      return '<div class="trow isdir" data-path="' + esc(e.path) + '"' + style + '>' +
+      return '<div class="trow isdir' + hid + '" data-path="' + esc(e.path) + '"' + style + '>' +
              '<button class="twist glyph ' + esc(e.glyph_cls) + '" type="button" ' +
              'aria-expanded="false" aria-label="Toggle ' + esc(e.name) + '">' + esc(e.glyph) + '</button>' +
              '<span class="tname">' + esc(e.name) + '</span>' +
@@ -55,7 +56,7 @@
     var anchor = e.view
       ? '<a class="tname" href="' + esc(e.view) + '" data-view="' + esc(e.view) + '">' + esc(e.name) + '</a>'
       : '<a class="tname" href="' + esc(e.raw) + '" download>' + esc(e.name) + '</a>';
-    return '<div class="trow isfile"' + style + '>' +
+    return '<div class="trow isfile' + hid + '"' + style + '>' +
            '<span class="twist-spacer" aria-hidden="true"></span>' +
            '<span class="glyph ' + esc(e.glyph_cls) + '" aria-hidden="true">' + esc(e.glyph) + '</span>' +
            anchor + '<span class="tsize">' + esc(e.size_h || '') + '</span>' +
@@ -129,7 +130,11 @@
         var entries = data.entries || [];
         inner.innerHTML = entries.map(function (e) { return rowHtml(e, 0); }).join('') ||
           '<div class="empty">This folder is empty.</div>';
-        if (footEl) footEl.textContent = entries.length + ' item' + (entries.length === 1 ? '' : 's');
+        if (footEl) {
+          var nHidden = entries.filter(function (e) { return e.hidden; }).length;
+          footEl.textContent = entries.length + ' item' + (entries.length === 1 ? '' : 's') +
+            (nHidden ? ' · ' + nHidden + ' hidden' : '');
+        }
       }).catch(function () {});
     }
 
@@ -225,6 +230,27 @@
       showPlaceholder();
     }
   });
+
+  // ---------- hidden & git-ignored files ----------
+  // Rows arrive with an is-hidden class (dotfiles + gitignored, marked
+  // server-side); the tree's hide-hidden class keeps them display:none. The
+  // side-head ".*" button flips that, and the choice sticks via localStorage.
+  var hidToggle = document.getElementById('hid-toggle');
+  var HID_KEY = 'preview.show-hidden';
+  function applyHidden(show) {
+    tree.classList.toggle('hide-hidden', !show);
+    if (hidToggle) hidToggle.setAttribute('aria-pressed', String(!!show));
+  }
+  var showHidden = false;
+  try { showHidden = localStorage.getItem(HID_KEY) === '1'; } catch (e) {}
+  applyHidden(showHidden);
+  if (hidToggle) {
+    hidToggle.addEventListener('click', function () {
+      showHidden = !showHidden;
+      applyHidden(showHidden);
+      try { localStorage.setItem(HID_KEY, showHidden ? '1' : '0'); } catch (e) {}
+    });
+  }
 
   // Expose a tiny surface for the upload modal.
   window.PreviewExplorer = {
