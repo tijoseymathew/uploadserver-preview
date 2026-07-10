@@ -2,6 +2,8 @@
    Turns the server-rendered directory listing into a small SPA: expand/collapse
    folders in the tree (lazily fetching /__index__ JSON) and load files into the
    content pane in place via window.PreviewViewer.load() — no full navigation.
+   Also tracks the last-interacted directory and exposes window.PreviewExplorer
+   (getLastDir / refreshDir) for the upload modal.
    Progressive enhancement: without this script the tree and file links still
    work as plain server-rendered links. */
 (function () {
@@ -10,14 +12,21 @@
   var VIEW_ROUTE = '/__view__';
 
   var tree = document.getElementById('tree');
-  if (!tree || !window.PreviewViewer) return; // nothing to enhance
+  if (!tree) return; // nothing to enhance
 
   var content = document.getElementById('content');
   var rawlink = document.getElementById('rawlink');
   var kindEl = document.getElementById('kind');
   var metaEl = document.getElementById('meta');
   var toggle = document.getElementById('viewtoggle');
+  var footEl = document.getElementById('exp-foot');
   var placeholder = content ? content.innerHTML : '';
+
+  // The directory this shell was rendered for, and the folder the user last
+  // touched (expanded or picked a file from). The upload modal defaults its
+  // destination to lastDir.
+  var cwd = tree.dataset.cwd || '/';
+  var lastDir = cwd;
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -49,11 +58,26 @@
     return (parseInt(row.style.getPropertyValue('--depth'), 10) || 0);
   }
 
+  function fetchIndex(path) {
+    return fetch('/__index__?path=' + encodeURIComponent(path), { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  function findDirRow(path) {
+    var rows = tree.querySelectorAll('.trow.isdir');
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].dataset.path === path) return rows[i];
+    }
+    return null;
+  }
+
   // ---------- folder expand / collapse ----------
   function toggleDir(row) {
     var twist = row.querySelector('.twist');
     var children = row.nextElementSibling;
     if (!twist || !children || !children.classList.contains('tchildren')) return;
+
+    lastDir = row.dataset.path || lastDir;
 
     if (twist.getAttribute('aria-expanded') === 'true') {
       twist.setAttribute('aria-expanded', 'false');
@@ -69,8 +93,7 @@
 
     var depth = depthOf(row) + 1;
     children.innerHTML = '<div class="tnote" style="--depth:' + depth + '">Loading&hellip;</div>';
-    fetch('/__index__?path=' + encodeURIComponent(row.dataset.path), { credentials: 'same-origin' })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    fetchIndex(row.dataset.path)
       .then(function (data) {
         var html = (data.entries || []).map(function (e) { return rowHtml(e, depth); }).join('');
         children.innerHTML = html || '<div class="tnote" style="--depth:' + depth + '">empty</div>';
@@ -85,11 +108,56 @@
       });
   }
 
+  // Re-fetch a directory's listing and rebuild its rows in place. Used after an
+  // upload lands in `path`. Handles the root tree and any expanded subfolder.
+  function refreshDir(path) {
+    if (!path) path = cwd;
+    if (path.charAt(path.length - 1) !== '/') path += '/';
+
+    if (path === cwd) {
+      var inner = tree.querySelector('.tree-inner');
+      if (!inner) return Promise.resolve();
+      return fetchIndex(path).then(function (data) {
+        var entries = data.entries || [];
+        inner.innerHTML = entries.map(function (e) { return rowHtml(e, 0); }).join('') ||
+          '<div class="empty">This folder is empty.</div>';
+        if (footEl) footEl.textContent = entries.length + ' item' + (entries.length === 1 ? '' : 's');
+      }).catch(function () {});
+    }
+
+    var row = findDirRow(path);
+    if (!row) return Promise.resolve();
+    var children = row.nextElementSibling;
+    var depth = depthOf(row) + 1;
+    delete row.dataset.loaded;
+    if (row.classList.contains('open') && children) {
+      return fetchIndex(path).then(function (data) {
+        var html = (data.entries || []).map(function (e) { return rowHtml(e, depth); }).join('');
+        children.innerHTML = html || '<div class="tnote" style="--depth:' + depth + '">empty</div>';
+        row.dataset.loaded = '1';
+      }).catch(function () {});
+    }
+    return Promise.resolve();
+  }
+
   // ---------- file selection ----------
   function pathFromView(view) {
     var q = view.indexOf('?');
     var params = new URLSearchParams(q >= 0 ? view.slice(q + 1) : '');
     return params.get('path');
+  }
+
+  // The directory containing a file row: for depth-0 files that's the cwd; for
+  // deeper files it's the dir row preceding the enclosing .tchildren block.
+  function parentDirOf(anchor) {
+    var container = anchor.closest('.tchildren');
+    if (container) {
+      var dirRow = container.previousElementSibling;
+      if (dirRow && dirRow.classList.contains('isdir') && dirRow.dataset.path) {
+        return dirRow.dataset.path;
+      }
+    }
+    return cwd;
   }
 
   function markActive(anchor) {
@@ -104,7 +172,8 @@
   function loadView(view, anchor, push) {
     var filePath = pathFromView(view);
     if (!filePath) return;
-    window.PreviewViewer.load(filePath);
+    if (window.PreviewViewer) window.PreviewViewer.load(filePath);
+    if (anchor) lastDir = parentDirOf(anchor);
     if (rawlink) rawlink.hidden = false;
     markActive(anchor);
     if (push) {
@@ -127,7 +196,7 @@
     if (twist) { ev.preventDefault(); toggleDir(twist.closest('.trow.isdir')); return; }
 
     var anchor = ev.target.closest('a.tname[data-view]');
-    if (anchor) { ev.preventDefault(); loadView(anchor.getAttribute('data-view'), anchor, true); return; }
+    if (anchor && window.PreviewViewer) { ev.preventDefault(); loadView(anchor.getAttribute('data-view'), anchor, true); return; }
 
     var dirRow = ev.target.closest('.trow.isdir');
     if (dirRow) { toggleDir(dirRow); return; }
@@ -144,9 +213,16 @@
     }
   });
 
+  // Expose a tiny surface for the upload modal.
+  window.PreviewExplorer = {
+    getCwd: function () { return cwd; },
+    getLastDir: function () { return lastDir; },
+    refreshDir: refreshDir
+  };
+
   // Deep-link: if the shell was opened with ?view=<path>, load that file.
   var initial = new URLSearchParams(location.search).get('view');
-  if (initial) {
+  if (initial && window.PreviewViewer) {
     var a0 = tree.querySelector('a.tname[data-view*="' + encodeURIComponent(initial) + '"]');
     loadView(VIEW_ROUTE + '?path=' + encodeURIComponent(initial), a0, false);
   }
