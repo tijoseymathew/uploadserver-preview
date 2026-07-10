@@ -1,26 +1,39 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "uploadserver-preview"
-version = "0.1.11"
+version = "0.1.12"
 description = "uploadserver plus an in-browser previewer for developer files (Markdown, JSON, code, CSV, diffs, images). No build step; works offline on a LAN."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Josey Mathew", email = "tijoseymathew@gmail.com" },
+]
 keywords = ["http", "server", "upload", "file-server", "preview", "markdown", "syntax-highlighting", "diff"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
 ]
 dependencies = [
-    "uploadserver>=5.0",
+    "uploadserver>=6.0,<7",
 ]
+
+[project.urls]
+Repository = "https://github.com/tijoseymathew/uploadserver-preview"
+Issues = "https://github.com/tijoseymathew/uploadserver-preview/issues"
 
 [project.scripts]
 uploadserver-preview = "uploadserver_preview:main"

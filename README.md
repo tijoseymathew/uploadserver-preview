@@ -13,10 +13,20 @@ server like this usually lives. Uploads and every other `uploadserver` feature
 
 ## Install
 
+Published on PyPI as [`uploadserver-preview`](https://pypi.org/project/uploadserver-preview/).
+
+With [`uv`](https://docs.astral.sh/uv/) (recommended — no separate install step):
+
 ```bash
-pip install ./uploadserver-preview      # from this folder
-# or, once published:
-# pip install uploadserver-preview
+uvx uploadserver-preview             # run once, in an ephemeral environment
+uvx uploadserver-preview 9000 -d /srv
+```
+
+Or install it properly, with either `uv` or `pip`:
+
+```bash
+uv tool install uploadserver-preview
+pip install uploadserver-preview
 ```
 
 This pulls in `uploadserver` as a dependency. Python 3.9+.
