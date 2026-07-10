@@ -21,21 +21,21 @@
 
 :root {
   /* ---- surfaces ---- */
-  --bg:            #e9e9ec;   /* the desk behind the app window            */
-  --chrome:        #f3f3f5;   /* title bar / footer                        */
+  --bg:            #e8e8ea;   /* the desk behind the app window            */
+  --chrome:        #f6f6f7;   /* title bar / footer                        */
   --panel:         #ffffff;   /* main content surface                      */
   --panel-2:       #f7f7f8;   /* insets: gutters, table heads, code blocks */
   --sidebar:       #fbfbfc;   /* explorer / tree background                */
 
-  --border:        #e4e4e8;
-  --border-soft:   #eeeef0;
-  --border-strong: #d8d8dd;
+  --border:        #ececed;
+  --border-soft:   #f0f0f1;
+  --border-strong: #e2e2e4;
 
   /* ---- text ---- */
-  --text:          #1c1c22;
-  --text-strong:   #0a0a0c;
-  --muted:         #6a6a72;
-  --faint:         #9a9aa2;
+  --text:          #3f3f46;
+  --text-strong:   #131316;
+  --muted:         #7a7a82;
+  --faint:         #ababb2;
 
   /* ---- accent (interactive / active) ---- */
   --accent:          #2f6feb;
@@ -43,6 +43,11 @@
   --accent-weak:     rgba(47, 111, 235, .10);
   --accent-strong:   rgba(47, 111, 235, .16);
   --accent-contrast: #ffffff;             /* text on a filled accent */
+
+  /* filled active controls (view toggle, eye). The light direction fills
+     these near-black rather than accent-blue; dark keeps the accent fill. */
+  --control-active-bg: #16181d;
+  --control-active-fg: #ffffff;
 
   /* ---- diff / change ---- */
   --add-fg: #1a7f37;  --add-bg: #e6ffec;
@@ -52,13 +57,18 @@
   --danger: #cf222e;
 
   /* ---- file-kind glyph colours (the coloured ◆ in listings) ---- */
-  --g-dir:    #d9a021;   /* folders                */
+  --g-dir:    #e0a530;   /* folders                */
   --g-code:   #2f6feb;   /* source code            */
-  --g-doc:    #4c86ad;   /* markdown / prose       */
-  --g-data:   #b0902f;   /* json / yaml / csv      */
+  --g-doc:    #5b8fb0;   /* markdown / prose       */
+  --g-data:   #a8a83a;   /* json / yaml / csv      */
   --g-html:   #d9682f;   /* html / xml             */
   --g-img:    #9a4fc0;   /* images                 */
   --g-diff:   #c9573b;   /* diffs / patches        */
+
+  /* ---- elevation ---- */
+  --shadow-toast: 0 8px 24px rgba(20, 20, 30, .14);
+  --shadow-modal: 0 24px 60px -24px rgba(20, 20, 30, .28);
+  --shadow-sheet: 0 -14px 44px rgba(20, 20, 30, .18);
 
   /* ---- shape ---- */
   --radius:    8px;
@@ -98,6 +108,9 @@
   --accent-strong:   rgba(76, 141, 255, .16);
   --accent-contrast: #0d1117;
 
+  --control-active-bg: var(--accent);
+  --control-active-fg: var(--accent-contrast);
+
   --add-fg: #3fb950;  --add-bg: rgba(63, 185, 80, .14);
   --del-fg: #f85149;  --del-bg: rgba(248, 81, 73, .14);
   --mod-fg: #d29922;  --mod-bg: rgba(210, 153, 34, .14);
@@ -111,6 +124,10 @@
   --g-html:   #f0883e;
   --g-img:    #d2a8ff;
   --g-diff:   #f0883e;
+
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .28);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .45);
+  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .4);
 
   color-scheme: dark;
 }
@@ -140,6 +157,9 @@
     --accent-strong:   rgba(76, 141, 255, .16);
     --accent-contrast: #0d1117;
 
+    --control-active-bg: var(--accent);
+    --control-active-fg: var(--accent-contrast);
+
     --add-fg: #3fb950;  --add-bg: rgba(63, 185, 80, .14);
     --del-fg: #f85149;  --del-bg: rgba(248, 81, 73, .14);
     --mod-fg: #d29922;  --mod-bg: rgba(210, 153, 34, .14);
@@ -148,6 +168,10 @@
 
     --g-dir:  #e3b341;  --g-code: #4c8dff;  --g-doc: #519aba;
     --g-data: #cbcb41;  --g-html: #f0883e;  --g-img: #d2a8ff;  --g-diff: #f0883e;
+
+    --shadow-toast: 0 8px 24px rgba(0, 0, 0, .28);
+    --shadow-modal: 0 20px 60px rgba(0, 0, 0, .45);
+    --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .4);
 
     color-scheme: dark;
   }

@@ -85,8 +85,8 @@ a:hover { text-decoration: underline; }
 }
 .segmented button:hover { color: var(--text); }
 .segmented button[aria-pressed="true"] {
-  background: var(--accent);
-  color: var(--accent-contrast);
+  background: var(--control-active-bg);
+  color: var(--control-active-fg);
 }
 
 /* generic button */
@@ -277,9 +277,9 @@ a:hover { text-decoration: underline; }
 .hid-toggle[aria-pressed="true"] .eye-open { display: inline-block; }
 .hid-toggle[aria-pressed="true"] .eye-closed { display: none; }
 .hid-toggle[aria-pressed="true"] {
-  color: var(--accent-contrast);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: var(--control-active-fg);
+  background: var(--control-active-bg);
+  border-color: var(--control-active-bg);
 }
 .tree.hide-hidden .trow.is-hidden,
 .tree.hide-hidden .trow.is-hidden + .tchildren { display: none; }
@@ -481,7 +481,7 @@ a:hover { text-decoration: underline; }
     border-top: 1px solid var(--border-strong);
     border-top-left-radius: var(--radius-lg, 12px);
     border-top-right-radius: var(--radius-lg, 12px);
-    box-shadow: 0 -14px 44px rgba(0, 0, 0, .4);
+    box-shadow: var(--shadow-sheet);
     z-index: 50;
     transform: translateY(100%);
     transition: transform .28s cubic-bezier(.32, .72, 0, 1);
@@ -693,7 +693,7 @@ a:hover { text-decoration: underline; }
   border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   padding: 8px 11px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  box-shadow: var(--shadow-toast);
   opacity: 0;
   transform: translateY(-4px);
   transition: opacity .2s ease, transform .2s ease;
@@ -925,7 +925,7 @@ andypf-json-viewer {
   font-family: var(--mono);
   font-size: 15px;
   letter-spacing: .02em;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+  box-shadow: var(--shadow-modal);
 }
 .drop-overlay .do-glyph { font-size: 26px; color: var(--accent); line-height: 1; }
 
@@ -950,7 +950,7 @@ andypf-json-viewer {
   background: var(--panel);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg, 12px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+  box-shadow: var(--shadow-modal);
   overflow: hidden;
 }
 .modal-head {
