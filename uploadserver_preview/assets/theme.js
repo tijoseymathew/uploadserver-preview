@@ -92,4 +92,69 @@
       notify();
     }
   };
+
+  // The topbar picker: a quiet icon button that opens a small popover of the
+  // themes. Built here from THEMES so the list has a single source of truth.
+  function initMenu() {
+    var wrap = document.getElementById('theme-menu');
+    var btn = document.getElementById('theme-btn');
+    var pop = document.getElementById('theme-pop');
+    if (!wrap || !btn || !pop) return;
+
+    pop.textContent = '';
+    THEMES.forEach(function (t) {
+      var opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'theme-opt';
+      opt.setAttribute('role', 'menuitemradio');
+      opt.setAttribute('data-theme-id', t.id);
+      opt.innerHTML = '<span class="swatch" aria-hidden="true"></span>' +
+                      '<span class="opt-lbl"></span>' +
+                      '<span class="opt-check" aria-hidden="true">✓</span>';
+      opt.querySelector('.opt-lbl').textContent = t.label;
+      opt.addEventListener('click', function () {
+        window.PreviewTheme.set(t.id);
+        mark();
+        close();
+        btn.focus();
+      });
+      pop.appendChild(opt);
+    });
+
+    function mark() {
+      var cur = current();
+      var opts = pop.querySelectorAll('.theme-opt');
+      for (var i = 0; i < opts.length; i++) {
+        opts[i].setAttribute('aria-checked',
+          String(opts[i].getAttribute('data-theme-id') === cur));
+      }
+    }
+    function open() {
+      mark();
+      pop.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      document.addEventListener('click', onDoc, true);
+      document.addEventListener('keydown', onKey);
+    }
+    function close() {
+      pop.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('click', onDoc, true);
+      document.removeEventListener('keydown', onKey);
+    }
+    function onDoc(e) { if (!wrap.contains(e.target)) close(); }
+    function onKey(e) { if (e.key === 'Escape') { close(); btn.focus(); } }
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (pop.hidden) open(); else close();
+    });
+    mark();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMenu);
+  } else {
+    initMenu();
+  }
 })();

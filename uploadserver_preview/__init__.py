@@ -288,6 +288,8 @@ _ICON_PATHS = {
                 '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
     "upload": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
               '<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    "theme": '<circle cx="12" cy="12" r="9"/>'
+             '<path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
 }
 
 
@@ -320,13 +322,19 @@ def _pane_controls_html(raw_hidden=False):
         'title="Open the live page in a new tab (runs scripts, no sandbox)">'
         '%(i_ext)s<span class="lbl">open</span></a>\n'
         '<a class="raw" id="rawlink" href="#"%(hid)s download title="Download the raw file">'
-        '%(i_dl)s<span class="lbl">download</span></a>'
+        '%(i_dl)s<span class="lbl">download</span></a>\n'
+        '<div class="theme-menu" id="theme-menu">\n'
+        '<button class="theme-btn" id="theme-btn" type="button" aria-haspopup="true" '
+        'aria-expanded="false" title="Change theme" aria-label="Change theme">%(i_theme)s</button>\n'
+        '<div class="theme-pop" id="theme-pop" role="menu" aria-label="Theme" hidden></div>\n'
+        '</div>'
         % {
             "i_doc": _icon("doc", "ico seg-ico"),
             "i_code": _icon("code", "ico seg-ico"),
             "i_diff": _icon("diff", "ico seg-ico"),
             "i_ext": _icon("external"),
             "i_dl": _icon("download"),
+            "i_theme": _icon("theme"),
             "hid": " hidden" if raw_hidden else "",
         }
     )
