@@ -264,6 +264,62 @@
     });
   }
 
+  // ---------- resizable sidebar width ----------
+  // A drag gutter between the sidebar and the content pane sets --sidebar-w
+  // (read by .sidebar in app.css); the chosen width sticks via localStorage.
+  // Disabled on the mobile layout, where the sidebar is a bottom sheet.
+  var resizer = document.getElementById('col-resizer');
+  var sidebar = document.getElementById('nav-sheet');
+  var WIDTH_KEY = 'preview.sidebar-w';
+  var MIN_W = 190, MAX_W = 640;
+
+  function curWidth() {
+    return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'), 10) || 300;
+  }
+  function applyWidth(w, persist) {
+    w = Math.max(MIN_W, Math.min(MAX_W, Math.round(w)));
+    document.documentElement.style.setProperty('--sidebar-w', w + 'px');
+    if (resizer) resizer.setAttribute('aria-valuenow', String(w));
+    if (persist) { try { localStorage.setItem(WIDTH_KEY, String(w)); } catch (e) {} }
+    return w;
+  }
+  (function () {
+    var saved = 0;
+    try { saved = parseInt(localStorage.getItem(WIDTH_KEY), 10) || 0; } catch (e) {}
+    if (saved) applyWidth(saved, false);
+  })();
+
+  if (resizer && sidebar) {
+    var isMobile = function () {
+      return window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+    };
+    var onMove = function (ev) {
+      applyWidth(ev.clientX - sidebar.getBoundingClientRect().left, false);
+    };
+    var onUp = function () {
+      resizer.classList.remove('dragging');
+      document.body.classList.remove('col-resizing');
+      applyWidth(curWidth(), true);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    resizer.addEventListener('pointerdown', function (ev) {
+      if (isMobile()) return; // bottom-sheet layout — nothing to resize
+      ev.preventDefault();
+      resizer.classList.add('dragging');
+      document.body.classList.add('col-resizing');
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    });
+    // keyboard affordance for the separator role
+    resizer.addEventListener('keydown', function (ev) {
+      var step = ev.key === 'ArrowLeft' ? -16 : ev.key === 'ArrowRight' ? 16 : 0;
+      if (!step) return;
+      ev.preventDefault();
+      applyWidth(curWidth() + step, true);
+    });
+  }
+
   // Expose a tiny surface for the upload modal.
   window.PreviewExplorer = {
     getCwd: function () { return cwd; },

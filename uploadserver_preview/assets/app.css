@@ -237,14 +237,30 @@ a:hover { text-decoration: underline; }
   min-height: 0;            /* let children own their scroll */
 }
 .sidebar {
-  flex: 0 0 300px;
-  width: 300px;
+  flex: 0 0 var(--sidebar-w, 300px);
+  width: var(--sidebar-w, 300px);
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: var(--panel);
   border-right: 1px solid var(--border);
 }
+/* draggable gutter between the sidebar and the content pane (desktop only) */
+.col-resizer {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: 5px;
+  margin-left: -3px;          /* straddle the sidebar border for an easy grab */
+  cursor: col-resize;
+  background: transparent;
+  z-index: 6;
+  touch-action: none;
+  transition: background .12s ease;
+}
+.col-resizer:hover,
+.col-resizer:focus-visible,
+.col-resizer.dragging { background: var(--accent); outline: none; }
+body.col-resizing { cursor: col-resize; user-select: none; }
 .side-head {
   flex: 0 0 auto;
   display: flex;
@@ -467,6 +483,7 @@ a:hover { text-decoration: underline; }
 
 @media (max-width: 760px) {
   .nav-toggle { display: inline-flex; align-items: center; }
+  .col-resizer { display: none; }        /* sidebar becomes a bottom sheet — no gutter */
 
   /* the sidebar lifts out of flow into a bottom sheet, off-screen until opened */
   .sidebar {

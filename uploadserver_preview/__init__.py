@@ -542,6 +542,8 @@ def _render_shell(handler, fs_path, names, url_path=None):
         <span class="exp-version" title="uploadserver-preview %(version)s">v%(version)s</span>
       </div>
     </aside>
+    <div class="col-resizer" id="col-resizer" role="separator" aria-orientation="vertical"
+         aria-label="Resize the explorer sidebar" tabindex="0"></div>
     <section class="pane">
       <header class="topbar">
         <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Toggle file navigator" aria-controls="nav-sheet" aria-expanded="false">&#9776;</button>
