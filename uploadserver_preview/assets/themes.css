@@ -312,9 +312,14 @@
 }
 
 /* auto — follow the OS. Any dark theme that should participate in "auto" needs
-   its token block duplicated here under the media query. */
+   its token block duplicated here under the media query.
+
+   The selector must match ONLY "no data-theme" or literally data-theme="auto"
+   — NOT ":not(light):not(dark)", which also matches every named theme (e.g.
+   catppuccin) and, at a higher specificity than their single-attribute
+   selectors, silently overrides them whenever the OS prefers dark. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+  :root:not([data-theme]), :root[data-theme="auto"] {
     --bg:            #0f1116;
     --chrome:        #0f1116;
     --panel:         #14161b;
