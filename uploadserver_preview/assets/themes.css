@@ -132,6 +132,94 @@
   color-scheme: dark;
 }
 
+/* ===========================================================================
+   THEME: dim  — a softer, lower-contrast dark (slate greys, muted accents)
+   =========================================================================== */
+[data-theme="dim"] {
+  --bg:            #1c2128;
+  --chrome:        #1c2128;
+  --panel:         #22272e;
+  --panel-2:       #1c2128;
+  --sidebar:       #22272e;
+
+  --border:        #373e47;
+  --border-soft:   #2d333b;
+  --border-strong: #444c56;
+
+  --text:          #adbac7;
+  --text-strong:   #cdd9e5;
+  --muted:         #768390;
+  --faint:         #636e7b;
+
+  --accent:          #539bf5;
+  --accent-fg:       #6cb6ff;
+  --accent-weak:     rgba(83, 155, 245, .10);
+  --accent-strong:   rgba(83, 155, 245, .16);
+  --accent-contrast: #1c2128;
+
+  --control-active-bg: var(--accent);
+  --control-active-fg: var(--accent-contrast);
+
+  --add-fg: #57ab5a;  --add-bg: rgba(87, 171, 90, .14);
+  --del-fg: #e5534b;  --del-bg: rgba(229, 83, 75, .14);
+  --mod-fg: #c69026;  --mod-bg: rgba(198, 144, 38, .14);
+  --link:   #6cb6ff;
+  --danger: #e5534b;
+
+  --g-dir:  #daaa3f;  --g-code: #539bf5;  --g-doc: #6cb6ff;
+  --g-data: #b0b03a;  --g-html: #e0823d;  --g-img: #b083f0;  --g-diff: #e0823d;
+
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .28);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .45);
+  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .4);
+
+  color-scheme: dark;
+}
+
+/* ===========================================================================
+   THEME: sepia  — a warm, paper-toned light (easy on the eyes, low glare)
+   =========================================================================== */
+[data-theme="sepia"] {
+  --bg:            #ece5d8;
+  --chrome:        #f2ece0;
+  --panel:         #faf4e8;
+  --panel-2:       #f1ebdd;
+  --sidebar:       #f4eee2;
+
+  --border:        #e4dccb;
+  --border-soft:   #ebe4d5;
+  --border-strong: #dbd2be;
+
+  --text:          #4a4234;
+  --text-strong:   #2b2519;
+  --muted:         #8a7f68;
+  --faint:         #b3a88f;
+
+  --accent:          #b5651d;
+  --accent-fg:       #8a4d15;
+  --accent-weak:     rgba(181, 101, 29, .12);
+  --accent-strong:   rgba(181, 101, 29, .18);
+  --accent-contrast: #faf4e8;
+
+  --control-active-bg: #2b2519;
+  --control-active-fg: #faf4e8;
+
+  --add-fg: #4a7c2f;  --add-bg: #e4efd6;
+  --del-fg: #b23a2e;  --del-bg: #f3ddd6;
+  --mod-fg: #8a6516;  --mod-bg: #f6eccf;
+  --link:   #9a5b1f;
+  --danger: #b23a2e;
+
+  --g-dir:  #c98a2b;  --g-code: #9a5b1f;  --g-doc: #7a6a3f;
+  --g-data: #8a8a2a;  --g-html: #c15a26;  --g-img: #8a5aa0;  --g-diff: #b5502f;
+
+  --shadow-toast: 0 8px 24px rgba(60, 45, 20, .16);
+  --shadow-modal: 0 24px 60px -24px rgba(60, 45, 20, .30);
+  --shadow-sheet: 0 -14px 44px rgba(60, 45, 20, .20);
+
+  color-scheme: light;
+}
+
 /* auto — follow the OS. Any dark theme that should participate in "auto" needs
    its token block duplicated here under the media query. */
 @media (prefers-color-scheme: dark) {

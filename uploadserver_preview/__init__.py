@@ -986,8 +986,10 @@ def _build_parser():
                         help="Specify alternate bind address [default: all interfaces]")
     parser.add_argument("--directory", "-d", default=os.getcwd(),
                         help="Specify alternative directory [default: current directory]")
-    parser.add_argument("--theme", type=str, default="auto", choices=["light", "auto", "dark"],
-                        help="Light or dark theme [default: auto]")
+    parser.add_argument("--theme", type=str, default="auto",
+                        choices=["light", "auto", "dark", "dim", "sepia"],
+                        help="Initial colour theme; readers can change it in the "
+                             "UI [default: auto]")
     parser.add_argument("--server-certificate", "--certificate", "-c",
                         help="Specify HTTPS server certificate to use [default: none]")
     parser.add_argument("--client-certificate",
