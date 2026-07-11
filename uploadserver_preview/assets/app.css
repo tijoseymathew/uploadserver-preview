@@ -693,8 +693,11 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .theme-opt[data-theme-id="auto"]  .swatch { background: linear-gradient(135deg, #faf7f0 0 50%, #14161b 50% 100%); }
 .theme-opt[data-theme-id="light"] .swatch { background: #ffffff; }
 .theme-opt[data-theme-id="dark"]  .swatch { background: #14161b; }
-.theme-opt[data-theme-id="dim"]   .swatch { background: #22272e; }
-.theme-opt[data-theme-id="sepia"] .swatch { background: #faf4e8; }
+/* the named palettes read as base surface (60%) + signature accent (40%) */
+.theme-opt[data-theme-id="catppuccin"] .swatch { background: linear-gradient(135deg, #1e1e2e 0 60%, #cba6f7 60% 100%); }
+.theme-opt[data-theme-id="tokyonight"] .swatch { background: linear-gradient(135deg, #1a1b26 0 60%, #7aa2f7 60% 100%); }
+.theme-opt[data-theme-id="gruvbox"]    .swatch { background: linear-gradient(135deg, #282828 0 60%, #fabd2f 60% 100%); }
+.theme-opt[data-theme-id="everforest"] .swatch { background: linear-gradient(135deg, #2d353b 0 60%, #a7c080 60% 100%); }
 
 /* compact topbar on narrow screens: tighter spacing, icon-only controls */
 @media (max-width: 760px) {

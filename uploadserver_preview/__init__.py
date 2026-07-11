@@ -998,7 +998,8 @@ def _build_parser():
     parser.add_argument("--directory", "-d", default=os.getcwd(),
                         help="Specify alternative directory [default: current directory]")
     parser.add_argument("--theme", type=str, default="auto",
-                        choices=["light", "auto", "dark", "dim", "sepia"],
+                        choices=["light", "auto", "dark", "catppuccin",
+                                 "tokyonight", "gruvbox", "everforest"],
                         help="Initial colour theme; readers can change it in the "
                              "UI [default: auto]")
     parser.add_argument("--server-certificate", "--certificate", "-c",

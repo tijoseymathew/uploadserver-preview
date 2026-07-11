@@ -13,8 +13,8 @@
     var m = document.documentElement.getAttribute('data-mode');
     if (m) return m === 'dark';
     var t = document.documentElement.getAttribute('data-theme');
-    if (t === 'dark' || t === 'dim') return true;
-    if (t === 'light' || t === 'sepia') return false;
+    if (t === 'light') return false;
+    if (t && t !== 'auto') return true;   // the named palettes are all dark
     return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   }
 

@@ -16,14 +16,16 @@
 
   // Ordered list the picker surfaces: value + human label.
   var THEMES = [
-    { id: 'auto',  label: 'System' },
-    { id: 'light', label: 'Light' },
-    { id: 'dark',  label: 'Dark' },
-    { id: 'dim',   label: 'Dim' },
-    { id: 'sepia', label: 'Sepia' }
+    { id: 'auto',       label: 'System' },
+    { id: 'light',      label: 'Light' },
+    { id: 'dark',       label: 'Dark' },
+    { id: 'catppuccin', label: 'Catppuccin' },
+    { id: 'tokyonight', label: 'Tokyo Night' },
+    { id: 'gruvbox',    label: 'Gruvbox' },
+    { id: 'everforest', label: 'Everforest' }
   ];
   // Named themes that resolve to a dark mode (drives the hljs sheet + data-mode).
-  var DARK = { dark: 1, dim: 1 };
+  var DARK = { dark: 1, catppuccin: 1, tokyonight: 1, gruvbox: 1, everforest: 1 };
 
   function saved() {
     try { return localStorage.getItem(KEY); } catch (e) { return null; }

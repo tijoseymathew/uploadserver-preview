@@ -132,92 +132,183 @@
   color-scheme: dark;
 }
 
+/* The community palettes below are all dark-family; each maps its canonical
+   colours onto our semantic tokens. They share the dark shadow scale. */
+
 /* ===========================================================================
-   THEME: dim  — a softer, lower-contrast dark (slate greys, muted accents)
+   THEME: catppuccin  — Catppuccin Mocha (https://catppuccin.com)
    =========================================================================== */
-[data-theme="dim"] {
-  --bg:            #1c2128;
-  --chrome:        #1c2128;
-  --panel:         #22272e;
-  --panel-2:       #1c2128;
-  --sidebar:       #22272e;
+[data-theme="catppuccin"] {
+  --bg:            #11111b;   /* crust  */
+  --chrome:        #181825;   /* mantle */
+  --panel:         #1e1e2e;   /* base   */
+  --panel-2:       #181825;
+  --sidebar:       #181825;
 
-  --border:        #373e47;
-  --border-soft:   #2d333b;
-  --border-strong: #444c56;
+  --border:        #313244;   /* surface0 */
+  --border-soft:   #26273a;
+  --border-strong: #45475a;   /* surface1 */
 
-  --text:          #adbac7;
-  --text-strong:   #cdd9e5;
-  --muted:         #768390;
-  --faint:         #636e7b;
+  --text:          #cdd6f4;
+  --text-strong:   #ffffff;
+  --muted:         #a6adc8;   /* subtext0 */
+  --faint:         #7f849c;   /* overlay1 */
 
-  --accent:          #539bf5;
-  --accent-fg:       #6cb6ff;
-  --accent-weak:     rgba(83, 155, 245, .10);
-  --accent-strong:   rgba(83, 155, 245, .16);
-  --accent-contrast: #1c2128;
+  --accent:          #89b4fa;   /* blue */
+  --accent-fg:       #89b4fa;
+  --accent-weak:     rgba(137, 180, 250, .12);
+  --accent-strong:   rgba(137, 180, 250, .18);
+  --accent-contrast: #1e1e2e;
 
   --control-active-bg: var(--accent);
   --control-active-fg: var(--accent-contrast);
 
-  --add-fg: #57ab5a;  --add-bg: rgba(87, 171, 90, .14);
-  --del-fg: #e5534b;  --del-bg: rgba(229, 83, 75, .14);
-  --mod-fg: #c69026;  --mod-bg: rgba(198, 144, 38, .14);
-  --link:   #6cb6ff;
-  --danger: #e5534b;
+  --add-fg: #a6e3a1;  --add-bg: rgba(166, 227, 161, .14);
+  --del-fg: #f38ba8;  --del-bg: rgba(243, 139, 168, .14);
+  --mod-fg: #f9e2af;  --mod-bg: rgba(249, 226, 175, .14);
+  --link:   #89b4fa;
+  --danger: #f38ba8;
 
-  --g-dir:  #daaa3f;  --g-code: #539bf5;  --g-doc: #6cb6ff;
-  --g-data: #b0b03a;  --g-html: #e0823d;  --g-img: #b083f0;  --g-diff: #e0823d;
+  --g-dir:  #f9e2af;  --g-code: #89b4fa;  --g-doc: #89dceb;
+  --g-data: #a6e3a1;  --g-html: #fab387;  --g-img: #cba6f7;  --g-diff: #eba0ac;
 
-  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .28);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .45);
-  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .4);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .38);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .55);
+  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .5);
 
   color-scheme: dark;
 }
 
 /* ===========================================================================
-   THEME: sepia  — a warm, paper-toned light (easy on the eyes, low glare)
+   THEME: tokyonight  — Tokyo Night (folke/tokyonight.nvim, "Night" variant)
    =========================================================================== */
-[data-theme="sepia"] {
-  --bg:            #ece5d8;
-  --chrome:        #f2ece0;
-  --panel:         #faf4e8;
-  --panel-2:       #f1ebdd;
-  --sidebar:       #f4eee2;
+[data-theme="tokyonight"] {
+  --bg:            #16161e;   /* bg_dark */
+  --chrome:        #16161e;
+  --panel:         #1a1b26;   /* bg */
+  --panel-2:       #16161e;
+  --sidebar:       #1a1b26;
 
-  --border:        #e4dccb;
-  --border-soft:   #ebe4d5;
-  --border-strong: #dbd2be;
+  --border:        #3b4261;   /* fg_gutter */
+  --border-soft:   #292e42;   /* bg_highlight */
+  --border-strong: #414868;   /* terminal_black */
 
-  --text:          #4a4234;
-  --text-strong:   #2b2519;
-  --muted:         #8a7f68;
-  --faint:         #b3a88f;
+  --text:          #c0caf5;
+  --text-strong:   #ffffff;
+  --muted:         #a9b1d6;   /* fg_dark */
+  --faint:         #565f89;   /* comment */
 
-  --accent:          #b5651d;
-  --accent-fg:       #8a4d15;
-  --accent-weak:     rgba(181, 101, 29, .12);
-  --accent-strong:   rgba(181, 101, 29, .18);
-  --accent-contrast: #faf4e8;
+  --accent:          #7aa2f7;   /* blue */
+  --accent-fg:       #7aa2f7;
+  --accent-weak:     rgba(122, 162, 247, .12);
+  --accent-strong:   rgba(122, 162, 247, .18);
+  --accent-contrast: #16161e;
 
-  --control-active-bg: #2b2519;
-  --control-active-fg: #faf4e8;
+  --control-active-bg: var(--accent);
+  --control-active-fg: var(--accent-contrast);
 
-  --add-fg: #4a7c2f;  --add-bg: #e4efd6;
-  --del-fg: #b23a2e;  --del-bg: #f3ddd6;
-  --mod-fg: #8a6516;  --mod-bg: #f6eccf;
-  --link:   #9a5b1f;
-  --danger: #b23a2e;
+  --add-fg: #9ece6a;  --add-bg: rgba(158, 206, 106, .14);
+  --del-fg: #f7768e;  --del-bg: rgba(247, 118, 142, .14);
+  --mod-fg: #e0af68;  --mod-bg: rgba(224, 175, 104, .14);
+  --link:   #7aa2f7;
+  --danger: #f7768e;
 
-  --g-dir:  #c98a2b;  --g-code: #9a5b1f;  --g-doc: #7a6a3f;
-  --g-data: #8a8a2a;  --g-html: #c15a26;  --g-img: #8a5aa0;  --g-diff: #b5502f;
+  --g-dir:  #e0af68;  --g-code: #7aa2f7;  --g-doc: #7dcfff;
+  --g-data: #9ece6a;  --g-html: #ff9e64;  --g-img: #bb9af7;  --g-diff: #f7768e;
 
-  --shadow-toast: 0 8px 24px rgba(60, 45, 20, .16);
-  --shadow-modal: 0 24px 60px -24px rgba(60, 45, 20, .30);
-  --shadow-sheet: 0 -14px 44px rgba(60, 45, 20, .20);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .38);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .55);
+  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .5);
 
-  color-scheme: light;
+  color-scheme: dark;
+}
+
+/* ===========================================================================
+   THEME: gruvbox  — Gruvbox dark, medium (morhetz/gruvbox)
+   =========================================================================== */
+[data-theme="gruvbox"] {
+  --bg:            #1d2021;   /* bg0_hard */
+  --chrome:        #1d2021;
+  --panel:         #282828;   /* bg0 */
+  --panel-2:       #32302f;   /* bg0_soft */
+  --sidebar:       #282828;
+
+  --border:        #504945;   /* bg2 */
+  --border-soft:   #3c3836;   /* bg1 */
+  --border-strong: #665c54;   /* bg3 */
+
+  --text:          #ebdbb2;   /* fg1 */
+  --text-strong:   #fbf1c7;   /* fg0 */
+  --muted:         #a89984;   /* fg4 */
+  --faint:         #928374;   /* gray */
+
+  --accent:          #83a598;   /* blue */
+  --accent-fg:       #83a598;
+  --accent-weak:     rgba(131, 165, 152, .14);
+  --accent-strong:   rgba(131, 165, 152, .20);
+  --accent-contrast: #1d2021;
+
+  --control-active-bg: var(--accent);
+  --control-active-fg: var(--accent-contrast);
+
+  --add-fg: #b8bb26;  --add-bg: rgba(184, 187, 38, .14);
+  --del-fg: #fb4934;  --del-bg: rgba(251, 73, 52, .14);
+  --mod-fg: #fabd2f;  --mod-bg: rgba(250, 189, 47, .14);
+  --link:   #83a598;
+  --danger: #fb4934;
+
+  --g-dir:  #fabd2f;  --g-code: #83a598;  --g-doc: #8ec07c;
+  --g-data: #b8bb26;  --g-html: #fe8019;  --g-img: #d3869b;  --g-diff: #fb4934;
+
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .38);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .55);
+  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .5);
+
+  color-scheme: dark;
+}
+
+/* ===========================================================================
+   THEME: everforest  — Everforest dark, medium (sainnhe/everforest)
+   =========================================================================== */
+[data-theme="everforest"] {
+  --bg:            #232a2e;   /* bg_dim */
+  --chrome:        #232a2e;
+  --panel:         #2d353b;   /* bg0 */
+  --panel-2:       #343f44;   /* bg1 */
+  --sidebar:       #2d353b;
+
+  --border:        #475258;   /* bg3 */
+  --border-soft:   #343f44;   /* bg1 */
+  --border-strong: #4f585e;   /* bg4 */
+
+  --text:          #d3c6aa;   /* fg */
+  --text-strong:   #efebd4;
+  --muted:         #9da9a0;   /* grey2 */
+  --faint:         #7a8478;   /* grey0 */
+
+  --accent:          #7fbbb3;   /* blue */
+  --accent-fg:       #7fbbb3;
+  --accent-weak:     rgba(127, 187, 179, .14);
+  --accent-strong:   rgba(127, 187, 179, .20);
+  --accent-contrast: #2d353b;
+
+  --control-active-bg: var(--accent);
+  --control-active-fg: var(--accent-contrast);
+
+  --add-fg: #a7c080;  --add-bg: rgba(167, 192, 128, .14);
+  --del-fg: #e67e80;  --del-bg: rgba(230, 126, 128, .14);
+  --mod-fg: #dbbc7f;  --mod-bg: rgba(219, 188, 127, .14);
+  --link:   #7fbbb3;
+  --danger: #e67e80;
+
+  --g-dir:  #dbbc7f;  --g-code: #7fbbb3;  --g-doc: #83c092;
+  --g-data: #a7c080;  --g-html: #e69875;  --g-img: #d699b6;  --g-diff: #e67e80;
+
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, .34);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, .5);
+  --shadow-sheet: 0 -14px 44px rgba(0, 0, 0, .46);
+
+  color-scheme: dark;
 }
 
 /* auto — follow the OS. Any dark theme that should participate in "auto" needs
