@@ -63,6 +63,14 @@
 
   function mk(type, label, lang) { return { type: type, label: label, lang: lang || null }; }
 
+  // Would this filename open in the rich viewer? Mirrors the server's
+  // _is_previewable — drives whether a relative markdown link loads in place.
+  function isPreviewableName(name) {
+    var lower = name.toLowerCase();
+    if (lower in NAME_MAP) return true;
+    return !!KIND[extOf(lower)];
+  }
+
   // ---------- helpers ----------
   function decode(p) { try { return decodeURIComponent(p); } catch (e) { return p; } }
   function baseName(p) { p = p.replace(/\/+$/, ''); var i = p.lastIndexOf('/'); return i < 0 ? p : p.slice(i + 1); }
@@ -135,7 +143,46 @@
       a.setAttribute('rel', 'noopener noreferrer nofollow');
       if (/^https?:/i.test(a.getAttribute('href') || '')) a.setAttribute('target', '_blank');
     });
+    div.addEventListener('click', onMarkdownClick);
     content.appendChild(div);
+  }
+
+  // Resolve a rendered-markdown link to a same-origin file URL path, or null.
+  // Relative links resolve against the *markdown file's* directory (VIEW.path),
+  // not the page URL — so they are correct even on the standalone viewer, whose
+  // address is /__view__?path=...
+  function sameOriginPath(a) {
+    if (a.target === '_blank') return null;
+    var href = a.getAttribute('href') || '';
+    if (!href || href.charAt(0) === '#') return null;              // in-page anchor
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href) && !/^https?:/i.test(href)) return null; // mailto:, etc.
+    var dir = (VIEW.path || '/').replace(/[?#].*$/, '').replace(/[^\/]*$/, '');
+    var url;
+    try { url = new URL(href, location.origin + dir); } catch (e) { return null; }
+    return url.origin === location.origin ? url : null;
+  }
+
+  // Clicking a relative link to another previewable file should preview it in
+  // place rather than fall through to a full navigation (which, if the browser
+  // omits Sec-Fetch-Dest, the server answers with the raw bytes). Non-previewable
+  // targets and directories keep their normal navigation/download behaviour.
+  function onMarkdownClick(ev) {
+    if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+    var a = ev.target.closest('a[href]');
+    if (!a) return;
+    var url = sameOriginPath(a);
+    if (!url) return;                                   // external / anchor / mailto
+    var path = url.pathname;
+    if (path.charAt(path.length - 1) === '/') return;   // directory — let it navigate
+    if (!isPreviewableName(baseName(decode(path)))) return; // e.g. a .zip — normal download
+    ev.preventDefault();
+    var target = path + url.search;
+    if (window.PreviewExplorer && window.PreviewExplorer.openPath) {
+      window.PreviewExplorer.openPath(target);          // in-pane load inside the shell
+    } else {
+      load(target);                                     // standalone viewer
+      history.pushState({ view: target }, '', target);
+    }
   }
 
   function renderJson(text, kind) {

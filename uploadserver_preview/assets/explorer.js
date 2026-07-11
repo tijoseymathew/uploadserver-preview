@@ -320,11 +320,14 @@
     });
   }
 
-  // Expose a tiny surface for the upload modal.
+  // Expose a tiny surface for the upload modal and the in-pane link router.
   window.PreviewExplorer = {
     getCwd: function () { return cwd; },
     getLastDir: function () { return lastDir; },
-    refreshDir: refreshDir
+    refreshDir: refreshDir,
+    // Load a file URL path into the content pane in place (used by rendered
+    // markdown's relative links so they preview instead of navigating away).
+    openPath: function (path) { loadView(path, findFileAnchor(path), true); }
   };
 
   // Deep-link: the shell may have been served for a file URL (or a legacy
