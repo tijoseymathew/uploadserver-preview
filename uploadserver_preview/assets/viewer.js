@@ -7,12 +7,16 @@
 
   var content = document.getElementById('content');
 
-  var DARK = (function () {
+  // Resolved live so a mid-session theme switch re-themes rendered components.
+  // theme.js keeps data-mode in sync; the attribute checks are the fallback.
+  function isDark() {
+    var m = document.documentElement.getAttribute('data-mode');
+    if (m) return m === 'dark';
     var t = document.documentElement.getAttribute('data-theme');
-    if (t === 'dark') return true;
-    if (t === 'light') return false;
+    if (t === 'dark' || t === 'dim') return true;
+    if (t === 'light' || t === 'sepia') return false;
     return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  })();
+  }
 
   var MAX_TEXT = 3 * 1024 * 1024;   // 3 MB cap for text rendering
   var MAX_ROWS = 5000;              // row cap for CSV/TSV tables
@@ -202,7 +206,7 @@
     v.setAttribute('show-toolbar', 'true');
     v.setAttribute('show-copy', 'true');
     v.setAttribute('show-size', 'true');
-    v.setAttribute('theme', DARK ? 'default-dark' : 'default-light');
+    v.setAttribute('theme', isDark() ? 'default-dark' : 'default-light');
     content.appendChild(v);
     try { v.data = obj; } catch (e) { try { v.setAttribute('data', text); } catch (e2) {} }
   }
@@ -243,12 +247,12 @@
     if (!window.Diff2Html || typeof Diff2Html.html !== 'function') {
       return renderCode(text, 'diff');
     }
-    var wrap = elem('div', 'diffwrap' + (DARK ? ' d2h-dark-color-scheme' : ''));
+    var wrap = elem('div', 'diffwrap' + (isDark() ? ' d2h-dark-color-scheme' : ''));
     var html;
     try {
       html = Diff2Html.html(text, {
         drawFileList: true, matching: 'lines',
-        outputFormat: 'line-by-line', colorScheme: DARK ? 'dark' : 'light'
+        outputFormat: 'line-by-line', colorScheme: isDark() ? 'dark' : 'light'
       });
     } catch (e) { return renderCode(text, 'diff', 'Could not parse as a diff; showing source.'); }
     wrap.innerHTML = html; // diff2html escapes file content and names
@@ -422,6 +426,13 @@
   if (btnRendered) btnRendered.addEventListener('click', function () { setMode('rendered'); });
   if (btnRaw) btnRaw.addEventListener('click', function () { setMode('raw'); });
   if (btnDiff) btnDiff.addEventListener('click', function () { setMode('diff'); });
+
+  // diff2html and the JSON viewer bake in their light/dark colours at render
+  // time, so re-render the current file when the reader switches themes. CSS
+  // vars and the hljs sheet recolour everything else on their own.
+  document.addEventListener('ups:themechange', function () {
+    if (VIEW.text != null) renderCurrent();
+  });
 
   // Re-sync the git-dependent bits of the toggle: called after the file's text
   // arrives, and by git.js whenever /__git__ status lands or the compare base

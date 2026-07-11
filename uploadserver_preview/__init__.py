@@ -332,28 +332,31 @@ def _pane_controls_html(raw_hidden=False):
     )
 
 
-def _hljs_css_links(theme):
-    """The highlight.js theme stylesheet link(s) for the given --theme."""
-    if theme == "light":
-        return '<link rel="stylesheet" href="%s">' % _asset_url("hljs-github.min.css")
-    if theme == "dark":
-        return '<link rel="stylesheet" href="%s">' % _asset_url("hljs-github-dark.min.css")
-    # auto — follow the OS preference
+def _hljs_css_links():
+    """Both highlight.js code-theme sheets, tagged so theme.js can enable the
+    one matching the resolved light/dark mode. hljs runs entirely client-side,
+    so the active sheet is always chosen by JS — the reader can switch themes in
+    the UI without a page reload."""
     return (
-        '<link rel="stylesheet" href="%s" media="(prefers-color-scheme: light)">\n'
-        '<link rel="stylesheet" href="%s" media="(prefers-color-scheme: dark)">'
+        '<link rel="stylesheet" id="hljs-light" data-hljs="light" href="%s">\n'
+        '<link rel="stylesheet" id="hljs-dark" data-hljs="dark" href="%s">'
         % (_asset_url("hljs-github.min.css"), _asset_url("hljs-github-dark.min.css"))
     )
 
 
 def _head_links(theme):
-    """The full <link> set shared by the viewer and explorer pages."""
+    """The <link>/<script> head set shared by the viewer and explorer pages.
+
+    theme.js runs synchronously (before first paint and before the deferred
+    viewer scripts) so the reader's saved theme is applied without a flash.
+    """
     return "\n".join(
         [
             '<link rel="stylesheet" href="%s">' % _asset_url("themes.css"),
             '<link rel="stylesheet" href="%s">' % _asset_url("app.css"),
             '<link rel="stylesheet" href="%s">' % _asset_url("diff2html.min.css"),
-            _hljs_css_links(theme),
+            _hljs_css_links(),
+            '<script src="%s"></script>' % _asset_url("theme.js"),
         ]
     )
 
