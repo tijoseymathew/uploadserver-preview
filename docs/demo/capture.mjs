@@ -7,7 +7,8 @@
  *   BASE          running server, e.g. http://127.0.0.1:8791
  *   DIFF_URLPATH  URL path of a git-changed, previewable file, e.g. /uploadserver_preview/gitinfo.py
  *
- * Produces: term-00..14, d-{markdown,code,config,diff}, mobile-1, mobile-2
+ * Produces: term-00..14, d-{markdown,code,config,diff}, the hidden-files
+ * toggle pair, a README theme cycle, and mobile-1, mobile-2
  * (plus the intermediate raw app + phone screenshots they are built from).
  */
 const pw = await import(process.env.PW_MODULE);
@@ -85,6 +86,58 @@ await frame('d-markdown.png', '<b>Markdown</b>, rendered', '01-markdown.png');
 await frame('d-code.png', '<b>Code</b>, syntax-highlighted', '02-code.png');
 await frame('d-config.png', '<b>Config &amp; data</b> files', '03-config.png');
 await frame('d-diff.png', '<b>Git diffs</b> vs your branch', '04-gitdiff.png');
+
+/* ---------- hidden / git-ignored files toggle ---------- */
+// Explorer at the served root: capture the tree with hidden files off, then
+// click the eye toggle (#hid-toggle) to reveal dotfiles + git-ignored entries.
+{
+  await dp.goto(`${BASE}/`, { waitUntil: 'load' });
+  await settle(dp, 600);
+  // Start from a known state — the toggle's choice is sticky in localStorage.
+  await dp.evaluate(() => { try { localStorage.setItem('preview.show-hidden', '0'); } catch (e) {} });
+  await dp.reload({ waitUntil: 'load' });
+  await settle(dp, 600);
+  await dp.screenshot({ path: `${OUT}/05-hidden-off.png` });
+  await dp.click('#hid-toggle').catch(() => {});
+  await dp.waitForTimeout(500);
+  await dp.screenshot({ path: `${OUT}/05-hidden-on.png` });
+  console.log('app: hidden off/on');
+}
+await frame('d-hidden-off.png', 'Dotfiles &amp; git-ignored files stay <b>tucked away</b>', '05-hidden-off.png');
+await frame('d-hidden-on.png', 'The <b>eye toggle</b> reveals hidden &amp; ignored files', '05-hidden-on.png');
+
+/* ---------- theme cycle (README recolors under each theme) ---------- */
+// Open the README, pop the topbar theme picker for one frame, then step
+// through every named theme so the GIF shows the whole UI recolouring.
+//
+// The README is opened *through the shell* (land on the directory, click its
+// tree row) rather than by navigating straight to /README.md: a direct file
+// navigation only returns the explorer shell when Sec-Fetch-Dest is "document",
+// and Chromium drops that after we've visited the local file:// templates, so a
+// direct goto here would render the raw bytes with no shell (and no theme API).
+const THEME_IDS = ['dark', 'light', 'catppuccin', 'tokyonight', 'gruvbox', 'everforest'];
+{
+  await dp.goto(`${BASE}/`, { waitUntil: 'load' });
+  await settle(dp, 600);
+  await dp.locator('a.tname[href$="README.md"]').first().click().catch(() => {});
+  await waitRender(dp, '.content .markdown-body, .content .md');
+  await settle(dp, 800);
+  await dp.click('#theme-btn').catch(() => {});
+  await dp.waitForTimeout(400);
+  await dp.screenshot({ path: `${OUT}/06-theme-open.png` });
+  await dp.keyboard.press('Escape').catch(() => {});
+  await dp.waitForTimeout(200);
+  for (const id of THEME_IDS) {
+    await dp.evaluate((t) => window.PreviewTheme && window.PreviewTheme.set(t), id);
+    await dp.waitForTimeout(500);
+    await dp.screenshot({ path: `${OUT}/06-theme-${id}.png` });
+    console.log('app: theme', id);
+  }
+}
+await frame('d-theme-open.png', '<b>Themes</b> — pick one from the topbar', '06-theme-open.png');
+for (const id of THEME_IDS) {
+  await frame(`d-theme-${id}.png`, '<b>Themes</b> — one click recolours everything', `06-theme-${id}.png`);
+}
 
 /* ---------- mobile context (real iPhone-ish viewport) ---------- */
 const mobile = await browser.newContext({

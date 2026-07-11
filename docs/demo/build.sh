@@ -122,6 +122,15 @@ CONCAT="$WORK/concat.txt"
   emit d-code.png 2.5
   emit d-config.png 2.4
   emit d-diff.png 2.7
+  emit d-hidden-off.png 1.9
+  emit d-hidden-on.png 2.4
+  emit d-theme-open.png 2.0
+  emit d-theme-dark.png 0.9
+  emit d-theme-light.png 0.9
+  emit d-theme-catppuccin.png 0.9
+  emit d-theme-tokyonight.png 0.9
+  emit d-theme-gruvbox.png 0.9
+  emit d-theme-everforest.png 1.8
   emit mobile-1.png 3.0
   emit mobile-2.png 3.0
   printf "file '%s'\n" "$WORK/mobile-2.png"   # concat quirk: last frame needs no duration

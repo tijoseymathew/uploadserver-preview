@@ -33,6 +33,8 @@ dir that is removed on exit.
 |-------|--------|
 | Launch terminal (typed) | `terminal.html` |
 | Markdown / Code / Config / Git diff | the running app, framed by `desktop.html` |
+| Hidden-files toggle (off → on) | the explorer's eye toggle, framed by `desktop.html` |
+| Theme cycle (README under each theme) | the topbar theme picker, framed by `desktop.html` |
 | Mobile explorer + previews | the app at a phone viewport, composed by `showcase.html` |
 
 Edit the captions, timing, or which files are shown in `capture.mjs`; frame
