@@ -40,6 +40,11 @@ async function openDiff(page) {
   await btn.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
   await btn.click().catch(() => {});
   await waitRender(page, '.content .d2h-wrapper, .content .d2h-file-wrapper');
+  // The content pane fades every render in with a .22s "rise" animation
+  // (app.css). waitForSelector resolves the instant the diff attaches — while
+  // it is still at opacity 0 — so let the fade finish before the screenshot,
+  // or the diff frame comes out greyed.
+  await page.waitForTimeout(500);
 }
 
 /* 1. raw app screenshots (full-bleed) that the framed frames are built from */
