@@ -286,6 +286,8 @@ _ICON_PATHS = {
                 '<polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/>',
     "external": '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
                 '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
+    "upload": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+              '<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
 }
 
 
@@ -527,7 +529,7 @@ def _render_shell(handler, fs_path, names, url_path=None):
         <span class="exp-label">Explorer</span>
         <button class="hid-toggle" id="hid-toggle" type="button" aria-pressed="false"
                 title="Show hidden &amp; git-ignored files">%(eye)s%(eye_off)s</button>
-        <a class="btn btn-accent btn-sm" id="upload-open" href="/upload">&#8593; Upload</a>
+        <a class="btn btn-accent btn-sm" id="upload-open" href="/upload" title="Upload files to this folder">%(i_upload)s<span class="btn-lbl">Upload</span></a>
       </div>
       <div class="tree hide-hidden" id="tree" data-cwd="%(cwd)s">
         <div class="tree-inner">
@@ -562,7 +564,7 @@ def _render_shell(handler, fs_path, names, url_path=None):
   <div class="nav-backdrop" id="nav-backdrop"></div>
   <button class="nav-peek" id="nav-peek" type="button" aria-label="Show file navigator" aria-controls="nav-sheet"><span class="peek-grip" aria-hidden="true"></span></button>
   <div class="drop-overlay" id="drop-overlay" hidden aria-hidden="true">
-    <div class="drop-overlay-inner"><span class="do-glyph" aria-hidden="true">&#8593;</span>Drop files to upload</div>
+    <div class="drop-overlay-inner">%(do_glyph)sDrop files to upload</div>
   </div>
   <div class="modal-backdrop" id="upload-modal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="upload-title">
@@ -572,7 +574,7 @@ def _render_shell(handler, fs_path, names, url_path=None):
       </div>
       <p class="modal-dest">Uploading to <span class="dest-path" id="upload-dest">~</span></p>
       <div class="dropzone" id="upload-drop">
-        <span class="dz-glyph" aria-hidden="true">&#8593;</span>
+        %(dz_glyph)s
         <p class="dz-text">Drag &amp; drop files here</p>
         <p class="dz-sub">or <button type="button" class="linkbtn" id="upload-browse">browse&hellip;</button></p>
       </div>
@@ -597,6 +599,9 @@ def _render_shell(handler, fs_path, names, url_path=None):
         "controls": _pane_controls_html(raw_hidden=True),
         "eye": _icon("eye", "ico eye-open"),
         "eye_off": _icon("eye-off", "ico eye-closed"),
+        "i_upload": _icon("upload"),
+        "do_glyph": _icon("upload", "ico do-glyph"),
+        "dz_glyph": _icon("upload", "ico dz-glyph"),
         "chip": _chip_html(fs_path),
         "crumbs": crumbs,
         "cwd": esc(url_path),

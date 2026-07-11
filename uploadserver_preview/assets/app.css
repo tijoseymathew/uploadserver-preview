@@ -927,7 +927,7 @@ andypf-json-viewer {
   letter-spacing: .02em;
   box-shadow: var(--shadow-modal);
 }
-.drop-overlay .do-glyph { font-size: 26px; color: var(--accent); line-height: 1; }
+.drop-overlay .do-glyph { width: 26px; height: 26px; color: var(--accent); }
 
 /* modal */
 .modal-backdrop {
@@ -1007,7 +1007,7 @@ andypf-json-viewer {
   transition: border-color .12s ease, background .12s ease;
 }
 .dropzone.is-over { border-color: var(--accent); background: var(--accent-weak); }
-.dropzone .dz-glyph { font-size: 22px; color: var(--accent); line-height: 1; }
+.dropzone .dz-glyph { width: 22px; height: 22px; color: var(--accent); }
 .dropzone .dz-text { margin: 4px 0 0; font-size: 13.5px; color: var(--text); }
 .dropzone .dz-sub { margin: 0; font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .dropzone { transition: none; } }
