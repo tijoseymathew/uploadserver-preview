@@ -630,6 +630,11 @@ body.col-resizing { cursor: col-resize; user-select: none; }
   color: var(--text);
 }
 .raw:hover { text-decoration: none; border-color: var(--accent); background: var(--panel-2); }
+/* the copy control is a <button>, so neutralise the UA button chrome */
+button.raw { appearance: none; background: none; cursor: pointer; font: inherit; }
+button.raw:hover { background: var(--panel-2); }
+/* brief green confirmation after a successful copy */
+.raw.copied, .raw.copied:hover { color: var(--ok, #3fb950); border-color: currentColor; }
 
 /* theme picker — a quiet icon button and a small popover of the choices */
 .theme-menu { position: relative; flex: 0 0 auto; display: inline-flex; }

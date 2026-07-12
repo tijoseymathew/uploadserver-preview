@@ -284,6 +284,9 @@ _ICON_PATHS = {
             '<line x1="13" y1="17" x2="19" y2="17"/>',
     "download": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
                 '<polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    "copy": '<rect x="9" y="9" width="13" height="13" rx="2"/>'
+            '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    "check": '<polyline points="20 6 9 17 4 12"/>',
     "external": '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>'
                 '<polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
     "upload": '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
@@ -321,6 +324,9 @@ def _pane_controls_html(raw_hidden=False):
         '<a class="raw" id="openlink" href="#" hidden '
         'title="Open the live page in a new tab (runs scripts, no sandbox)">'
         '%(i_ext)s<span class="lbl">open</span></a>\n'
+        '<button class="raw" id="copylink" type="button" hidden '
+        'title="Copy contents to the clipboard">'
+        '%(i_copy)s<span class="lbl">Copy</span></button>\n'
         '<a class="raw" id="rawlink" href="#"%(hid)s download title="Download the raw file">'
         '%(i_dl)s<span class="lbl">Download</span></a>\n'
         '<div class="theme-menu" id="theme-menu">\n'
@@ -333,6 +339,7 @@ def _pane_controls_html(raw_hidden=False):
             "i_code": _icon("code", "ico seg-ico"),
             "i_diff": _icon("diff", "ico seg-ico"),
             "i_ext": _icon("external"),
+            "i_copy": _icon("copy"),
             "i_dl": _icon("download"),
             "i_theme": _icon("theme"),
             "hid": " hidden" if raw_hidden else "",

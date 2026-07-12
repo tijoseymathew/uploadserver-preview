@@ -450,6 +450,75 @@
     }
   }
 
+  // ---------- copy to clipboard ----------
+  // One control that copies the current file's contents: the decoded text for
+  // text/code kinds, or the raw image bytes for images. Shown once a file is
+  // loaded (see load()), sitting next to Download in the topbar.
+  var copylink = document.getElementById('copylink');
+  var copyResetTimer = null;
+
+  function flashCopied(ok) {
+    if (!copylink) return;
+    if (copyResetTimer) clearTimeout(copyResetTimer);
+    var lbl = copylink.querySelector('.lbl');
+    copylink.classList.toggle('copied', ok);
+    if (lbl) lbl.textContent = ok ? 'Copied' : 'Failed';
+    copyResetTimer = setTimeout(function () {
+      copylink.classList.remove('copied');
+      if (lbl) lbl.textContent = 'Copy';
+      copyResetTimer = null;
+    }, 1600);
+  }
+
+  // Re-encode an image blob to PNG via a canvas — the clipboard only reliably
+  // accepts image/png, so anything else (jpeg, webp, gif, svg…) is converted.
+  function toPng(blob) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(blob);
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var c = document.createElement('canvas');
+          c.width = im.naturalWidth; c.height = im.naturalHeight;
+          c.getContext('2d').drawImage(im, 0, 0);
+          URL.revokeObjectURL(url);
+          c.toBlob(function (b) { b ? resolve(b) : reject(new Error('encode failed')); }, 'image/png');
+        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+      im.src = url;
+    });
+  }
+
+  function copyImage(href) {
+    if (!(window.ClipboardItem && navigator.clipboard && navigator.clipboard.write)) {
+      return Promise.reject(new Error('no clipboard image support'));
+    }
+    return fetch(href, { credentials: 'same-origin' }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.blob();
+    }).then(function (blob) {
+      var png = blob.type === 'image/png' ? Promise.resolve(blob) : toPng(blob);
+      return png.then(function (b) {
+        return navigator.clipboard.write([new window.ClipboardItem({ 'image/png': b })]);
+      });
+    });
+  }
+
+  if (copylink) {
+    copylink.addEventListener('click', function () {
+      var kind = VIEW.kind, done;
+      if (kind && kind.type === 'image') {
+        done = copyImage(VIEW.path);
+      } else if (VIEW.text != null && navigator.clipboard && navigator.clipboard.writeText) {
+        done = navigator.clipboard.writeText(VIEW.text);
+      } else {
+        done = Promise.reject(new Error('nothing to copy'));
+      }
+      done.then(function () { flashCopied(true); }, function () { flashCopied(false); });
+    });
+  }
+
   // ---------- load a file into the content pane ----------
   // Fetches `path` same-origin and renders it, updating the header (title,
   // breadcrumb, kind badge, raw link, meta). Callable repeatedly — this is the
@@ -462,6 +531,12 @@
     VIEW.text = null; VIEW.path = path; VIEW.diffable = false;
     if (toggle) toggle.hidden = true;
     if (btnDiff) { btnDiff.hidden = true; btnDiff.setAttribute('aria-pressed', 'false'); }
+    if (copylink) {
+      copylink.hidden = true;
+      copylink.classList.remove('copied');
+      if (copyResetTimer) { clearTimeout(copyResetTimer); copyResetTimer = null; }
+      var _cl = copylink.querySelector('.lbl'); if (_cl) _cl.textContent = 'Copy';
+    }
 
     var name = baseName(decode(path));
     document.title = name + ' · preview';
@@ -508,7 +583,11 @@
       if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
       var len = parseInt(res.headers.get('Content-Length') || '0', 10);
 
-      if (kind.type === 'image') { content.innerHTML = ''; return renderImage(path, name); }
+      if (kind.type === 'image') {
+        content.innerHTML = '';
+        if (copylink) copylink.hidden = false;
+        return renderImage(path, name);
+      }
 
       return res.text().then(function (text) {
         content.innerHTML = '';
@@ -519,6 +598,7 @@
         }
         setMeta(len, text);
         VIEW.text = text;
+        if (copylink) copylink.hidden = false;
         syncGit();
         renderCurrent();
       });
