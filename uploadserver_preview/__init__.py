@@ -322,7 +322,7 @@ def _pane_controls_html(raw_hidden=False):
         'title="Open the live page in a new tab (runs scripts, no sandbox)">'
         '%(i_ext)s<span class="lbl">open</span></a>\n'
         '<a class="raw" id="rawlink" href="#"%(hid)s download title="Download the raw file">'
-        '%(i_dl)s<span class="lbl">download</span></a>\n'
+        '%(i_dl)s<span class="lbl">Download</span></a>\n'
         '<div class="theme-menu" id="theme-menu">\n'
         '<button class="theme-btn" id="theme-btn" type="button" aria-haspopup="true" '
         'aria-expanded="false" title="Change theme" aria-label="Change theme">%(i_theme)s</button>\n'
