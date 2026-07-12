@@ -33,6 +33,7 @@ const CASES = [
   { file: 'change.diff',   expect: (h) => /d2h-/.test(h),                                                     label: 'unified diff' },
   { file: 'app.py',        expect: (h) => /codewrap/.test(h) && /class="gutter"/.test(h) && /class="hljs/.test(h), label: 'python code + line numbers' },
   { file: 'server.log',    expect: (h) => /codewrap/.test(h),                                                 label: 'plain log' },
+  { file: 'diagram.md',    expect: (h) => /markdown-body/.test(h) && /mermaid-diagram/.test(h) && /mmd-stub/.test(h) && !/language-mermaid/.test(h) && /class="hljs/.test(h), label: 'markdown mermaid diagram (stubbed)' },
 ];
 
 function runCase(tc) {
@@ -57,6 +58,13 @@ function runCase(tc) {
           text: () => Promise.resolve(buf.toString('utf8')),
         };
       });
+    };
+
+    // Stub mermaid so the diagram renderer runs without the 3.5 MB bundle (and
+    // without needing SVG layout, which jsdom lacks). Inert for non-mermaid files.
+    window.mermaid = {
+      initialize() {},
+      render(id) { return Promise.resolve({ svg: '<svg class="mmd-stub"><text>' + id + '</text></svg>' }); },
     };
 
     const runIn = (code, name) => {

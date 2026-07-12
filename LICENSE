@@ -30,6 +30,7 @@ This package bundles third-party JavaScript libraries under
   DOMPurify            Apache-2.0/MPL-2.0 (github.com/cure53/DOMPurify)
   PapaParse            MIT               (github.com/mholt/PapaParse)
   diff2html            MIT               (github.com/rtfpessoa/diff2html)
+  mermaid              MIT               (github.com/mermaid-js/mermaid)
   @andypf/json-viewer  MIT               (github.com/andypf/json-viewer)
 
 When redistributing, retain the corresponding upstream license notices.

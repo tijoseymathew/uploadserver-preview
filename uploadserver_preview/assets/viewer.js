@@ -7,6 +7,30 @@
 
   var content = document.getElementById('content');
 
+  // The <script> that loaded us, captured while document.currentScript is still
+  // valid. Used to derive sibling asset URLs — with the same ?v= cache-buster —
+  // for heavy libraries we only pull in on demand (mermaid).
+  var SELF_SRC = (document.currentScript && document.currentScript.src) || '';
+
+  // Lazily fetch the bundled mermaid build the first time a markdown file
+  // actually contains a diagram, so the common case never pays for 3.5 MB.
+  // Same-origin, so it works with no internet and within the 'self' CSP.
+  var mermaidPromise = null;
+  function loadMermaid() {
+    if (window.mermaid) return Promise.resolve(window.mermaid);
+    if (mermaidPromise) return mermaidPromise;
+    mermaidPromise = new Promise(function (resolve, reject) {
+      var url = SELF_SRC.replace(/viewer\.js(\?|$)/, 'mermaid.min.js$1');
+      if (!url || url === SELF_SRC) { reject(new Error('cannot resolve mermaid URL')); return; }
+      var s = document.createElement('script');
+      s.src = url;
+      s.onload = function () { window.mermaid ? resolve(window.mermaid) : reject(new Error('mermaid unavailable')); };
+      s.onerror = function () { mermaidPromise = null; reject(new Error('failed to load mermaid')); };
+      document.head.appendChild(s);
+    });
+    return mermaidPromise;
+  }
+
   // Resolved live so a mid-session theme switch re-themes rendered components.
   // theme.js keeps data-mode in sync; the attribute checks are the fallback.
   function isDark() {
@@ -142,13 +166,54 @@
     catch (e) { return renderCode(text, null, 'Could not parse Markdown; showing source.'); }
     var clean = DOMPurify.sanitize(raw, { ADD_ATTR: ['target'] });
     var div = elem('div', 'markdown-body'); div.innerHTML = clean;
-    div.querySelectorAll('pre code').forEach(function (b) { try { hljs.highlightElement(b); } catch (e) {} });
+    var mermaidNodes = [];
+    div.querySelectorAll('pre code').forEach(function (b) {
+      // ```mermaid fences become diagrams; everything else gets syntax-highlighted.
+      if (/(^|\s)language-mermaid(\s|$)/.test(b.className || '')) { mermaidNodes.push(b); return; }
+      try { hljs.highlightElement(b); } catch (e) {}
+    });
     div.querySelectorAll('a[href]').forEach(function (a) {
       a.setAttribute('rel', 'noopener noreferrer nofollow');
       if (/^https?:/i.test(a.getAttribute('href') || '')) a.setAttribute('target', '_blank');
     });
     div.addEventListener('click', onMarkdownClick);
     content.appendChild(div);
+    if (mermaidNodes.length) renderMermaidBlocks(mermaidNodes);
+  }
+
+  // Replace each ```mermaid source block with its rendered SVG. mermaid is
+  // pulled in on demand; if it fails to load or a diagram won't parse we fall
+  // back to the highlighted source so nothing is lost.
+  var mermaidSeq = 0;
+  function renderMermaidBlocks(nodes) {
+    loadMermaid().then(function (mermaid) {
+      try {
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'strict',       // mermaid sanitises labels/HTML itself
+          suppressErrorRendering: true,  // we render our own inline error note
+          theme: isDark() ? 'dark' : 'default'
+        });
+      } catch (e) {}
+      nodes.forEach(function (code) {
+        var pre = code.parentNode;
+        if (!pre || !pre.parentNode) return;
+        var src = code.textContent;
+        var host = elem('div', 'mermaid-diagram');
+        var id = 'mmd-' + (++mermaidSeq);
+        Promise.resolve().then(function () { return mermaid.render(id, src); }).then(function (out) {
+          host.innerHTML = out.svg;                     // strict mode already sanitised this
+          if (out && typeof out.bindFunctions === 'function') out.bindFunctions(host);
+          if (pre.parentNode) pre.parentNode.replaceChild(host, pre);
+        }).catch(function (err) {
+          try { hljs.highlightElement(code); } catch (e) {}
+          var msg = (err && err.message) ? err.message : String(err);
+          if (pre.parentNode) pre.parentNode.insertBefore(elem('div', 'mermaid-error', 'Mermaid: ' + msg), pre);
+        });
+      });
+    }).catch(function () {
+      nodes.forEach(function (code) { try { hljs.highlightElement(code); } catch (e) {} });
+    });
   }
 
   // Resolve a rendered-markdown link to a same-origin file URL path, or null.

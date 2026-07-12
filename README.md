@@ -84,7 +84,7 @@ All of `uploadserver`'s flags are accepted (`port`, `--directory/-d`,
 
 | Type | Extensions | Rendered as |
 |------|-----------|-------------|
-| Markdown | `.md .markdown .mdown .mkd` | Sanitized HTML prose; fenced code highlighted |
+| Markdown | `.md .markdown .mdown .mkd` | Sanitized HTML prose; fenced code highlighted; ` ```mermaid ` fences rendered as diagrams |
 | JSON | `.json .geojson .ipynb` | Collapsible tree (falls back to highlighted source if invalid) |
 | Config | `.yaml .yml .toml .ini .cfg .conf` | Highlighted source |
 | Code | `.py .js .ts .tsx .rs .go .java .c .cpp .rb .php .lua .sql .sh` and more | Highlighted, line-numbered |
@@ -118,8 +118,9 @@ keep the browser responsive; the raw link always serves the full file.
 
 All rendering libraries live under `uploadserver_preview/assets/` and are served
 locally, so the previewer needs no internet access. Bundled: highlight.js,
-marked, DOMPurify, PapaParse, diff2html, and `@andypf/json-viewer`. See
-`LICENSE` for their licenses.
+marked, DOMPurify, PapaParse, diff2html, mermaid, and `@andypf/json-viewer`. See
+`LICENSE` for their licenses. mermaid (~3.5 MB) is loaded on demand — only the
+first markdown file that actually contains a diagram pulls it in.
 
 ## Limitations
 
